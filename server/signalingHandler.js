@@ -229,57 +229,6 @@ class SignalingHandler {
     }
 
     handleStartCall(ws, msg) {
-        console.log("User startCall (ws):", ws.currentRoomId, ws.currentUsername);
-        if (ws.currentRoomId === null || ws.currentUsername === null) {
-            ws.send(JSON.stringify({ type: 'error', message: 'User must be in a room before starting a call.' }));
-            return;
-        }
-
-        if (this.roomManager.getCallMembers(ws.currentRoomId).length > 0) {
-            ws.send(JSON.stringify({ type: 'error', message: 'A call is already active in this room.' }));
-            return;
-        }
-
-        const { roomId, username } = msg;
-        console.log(roomId, username);
-
-        if (ws.currentRoomId !== roomId || ws.currentUsername !== username) {
-            ws.send(JSON.stringify({ type: 'error', message: 'RoomId or username does not match the current socket' }));
-            return;
-        }
-
-        const result = this.roomManager.startCall(roomId, username);
-        
-        if (!result.success) {
-            ws.send(JSON.stringify({ 
-                type: 'error', 
-                message: result.error
-            }));
-            return
-        }
-
-        // broadcast memberLeftRoom for remaining members
-        this.broadcastToRoom(roomId, {
-            type: 'memberLeftRoom',
-            roomId,
-            username: username
-        });
-
-        // remove roomId & username in ws
-        ws.currentRoomId = null;
-        ws.currentUsername = null;
-
-        console.log(`[${roomId}] ${username} left room`);
-    }
-    
-
-    handleJoinCall(ws, msg) {
-
-    }
-
-    handleLeaveCall(ws, msg) {}
-
-    hanldeStartCall(ws, msg) {
         const { roomId, username } = msg;
         if (!username || username.trim() === '') {
             ws.send(JSON.stringify({ type: 'error', message: 'Invalid username: username must contain non-space character.' }));
@@ -416,11 +365,11 @@ class SignalingHandler {
             return;
         }
         
-        const { roomId, username } = msg;
-        console.log(roomId, username);
+        const { roomId, sender } = msg;
+        console.log(roomId, sender);
 
-        if (ws.currentRoomId !== roomId || ws.currentUsername !== username) {
-            ws.send(JSON.stringify({ type: 'error', message: 'RoomId or username does not match the current socket' }));
+        if (ws.currentRoomId !== roomId || ws.currentUsername !== sender) {
+            ws.send(JSON.stringify({ type: 'error', message: 'RoomId or sender does not match the current socket' }));
             return;
         }
 
@@ -437,9 +386,9 @@ class SignalingHandler {
             
             targetSocket.send(JSON.stringify({
                 ...msg,
-                sender: username 
+                sender: sender,
             }));
-            console.log(`[Signaling] ${type} from ${username} -> ${target}`);
+            console.log(`[Signaling] ${type} from ${sender} -> ${target}`);
         } else {
             ws.send(JSON.stringify({
                 type: 'ERROR',
