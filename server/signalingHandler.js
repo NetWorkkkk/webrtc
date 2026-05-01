@@ -354,7 +354,6 @@ class SignalingHandler {
     }
 
     handleSignaling(ws, msg, handleType) {
-        console.log("User startCall (ws):", ws.currentRoomId, ws.currentUsername);
         if (ws.currentRoomId === null || ws.currentUsername === null) {
             ws.send(JSON.stringify({ type: 'error', message: 'User must be in a room before sending ' + handleType + '.' }));
             return;
@@ -366,7 +365,6 @@ class SignalingHandler {
         }
         
         const { roomId, username } = msg;
-        console.log(roomId, username);
 
         if (ws.currentRoomId !== roomId || ws.currentUsername !== username) {
             ws.send(JSON.stringify({ type: 'error', message: 'RoomId or username does not match the current socket' }));
