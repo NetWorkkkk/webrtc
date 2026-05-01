@@ -70,7 +70,6 @@ class SignalingHandler {
 
 
     handleCreateRoom(ws, msg) {
-        console.log('hih')
         const { roomId, username } = msg;
         
         if (!username || username.trim() === '') {
@@ -83,9 +82,9 @@ class SignalingHandler {
             return;
         }
 
-        const success = this.roomManager.createRoom(roomId, username);
+        const result = this.roomManager.createRoom(roomId, username);
         
-        if (!success) {
+        if (!result.success) {
             ws.send(JSON.stringify({ 
                 type: 'error', 
                 message: 'Room already exists, please join it or create another one' 
@@ -109,9 +108,70 @@ class SignalingHandler {
     }
 
     handleJoinRoom(ws, msg) {
+        const { roomId, username } = msg;
+        
+        if (!username || username.trim() === '') {
+            ws.send(JSON.stringify({ type: 'error', message: 'Invalid username: username must contain non-space character.' }));
+            return;
+        }
 
+        if (!roomId) {
+            ws.send(JSON.stringify({ type: 'error', message: 'Invalid roomId: roomId must contain non-space character.' }));
+            return;
+        }
+
+        const result = this.roomManager.joinRoom(roomId, username);
+        
+        if (!result.success) {
+            if (result.error === 'room not exist') {
+                ws.send(JSON.stringify({ 
+                    type: 'error', 
+                    message: 'Room not found, please create or join another one' 
+                }));
+            } else if (result.error === 'username exist') {
+                ws.send(JSON.stringify({ 
+                    type: 'error', 
+                    message: 'Username already taken in this room, please choose another name' 
+                }));
+            }
+            return;
+        }
+
+        ws.currentRoomId = roomId;
+        ws.currentUsername = username;
+        const key = this.getClientKey(roomId, username);
+        this.clients.set(key, ws);
+
+        // to the new member
+        ws.send(JSON.stringify({
+            type: 'roomMembers',
+            roomId,
+            members: result.members
+        }));
+
+        // to all remaining member
+        this.broadcastToRoom(roomId, {
+            type: 'memberJoinRoom',
+            roomId,
+            username: username
+        }, username);
+
+        // to the new member
+        const callMembers = this.roomManager.getCallMembers(roomId);
+        if (callMembers.length > 0) {
+            ws.send(JSON.stringify({
+                type: 'callMembers',
+                roomId,
+                members: callMembers
+            }));
+        }
+
+        console.log(`[${roomId}] ${username} joined room`);
     }
+
     handleLeaveRoom(ws, msg) {}
+
+
     handleJoinCall(ws, msg) {}
     handleLeaveCall(ws, msg) {}
     handleOffer(ws, msg) {}
