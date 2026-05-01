@@ -279,6 +279,101 @@ class SignalingHandler {
 
     handleLeaveCall(ws, msg) {}
 
+    hanldeStartCall(ws, msg) {
+        const { roomId, username } = msg;
+        if (!username || username.trim() === '') {
+            ws.send(JSON.stringify({ type: 'error', message: 'Invalid username: username must contain non-space character.' }));
+            return;
+        }
+        if (!roomId || roomId.trim() === '') {
+            ws.send(JSON.stringify({ type: 'error', message: 'Invalid roomId: roomId must contain non-space character.' }));
+            return;
+        }
+
+        const result = this.roomManager.startCall(roomId, username);
+        if (!result.success) {
+            ws.send(JSON.stringify({
+                type: 'error',
+                message: result.error
+            }));
+            return;
+        }
+
+        // to all roomMembers (include host)
+        this.broadcastToRoom(roomId, {
+            type: 'memberJoinCall',
+            roomId,
+            username
+        });
+
+        console.log(`[${roomId}] ${username} started call`);
+    }
+
+    handleJoinCall(ws, msg) {
+        const { roomId, username } = msg;
+        if (!username || username.trim() === '') {
+            ws.send(JSON.stringify({ type: 'error', message: 'Invalid username: username must contain non-space character.' }));
+            return;
+        }
+        if (!roomId || roomId.trim() === '') {
+            ws.send(JSON.stringify({ type: 'error', message: 'Invalid roomId: roomId must contain non-space character.' }));
+            return;
+        }
+
+        const result = this.roomManager.joinCall(roomId, username);
+        if (!result.success) {
+            ws.send(JSON.stringify({
+                type: 'error',
+                message: result.error
+            }));
+            return;
+        }
+
+        const members = this.roomManager.getCallMembers(roomId);
+        ws.send(JSON.stringify({
+            type: 'callMembers',
+            roomId,
+            members
+        }));
+
+        this.broadcastToRoom(roomId, {
+            type: 'memberJoinCall',
+            roomId,
+            username
+        });
+
+        console.log(`[${roomId}] ${username} joined call`);
+    }
+
+    handleLeaveCall(ws, msg) {
+        const { roomId, username } = msg;
+        if (!username || username.trim() === '') {
+            ws.send(JSON.stringify({ type: 'error', message: 'Invalid username: username must contain non-space character.' }));
+            return;
+        }
+        if (!roomId || roomId.trim() === '') {
+            ws.send(JSON.stringify({ type: 'error', message: 'Invalid roomId: roomId must contain non-space character.' }));
+            return;
+        }
+
+        const result = this.roomManager.leaveCall(roomId, username);
+        if (!result.success) {
+            ws.send(JSON.stringify({
+                type: 'error',
+                message: result.error
+            }));
+            return;
+        }
+
+        this.broadcastToRoom(roomId, {
+            type: 'memberLeaveCall',
+            roomId,
+            username
+        });
+
+        console.log(`[${roomId}] ${username} left call`);
+    }
+
     handleOffer(ws, msg) {
         this.handleSignaling(ws, msg, 'offer');
     }
@@ -290,7 +385,6 @@ class SignalingHandler {
     handleCandidate(ws, msg) {
         this.handleSignaling(ws, msg, 'candidate');
     }
-
 
     // ---------- Helpers ----------
 
