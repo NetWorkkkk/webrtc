@@ -69,14 +69,74 @@ class SignalingHandler {
     // DETAILED MESSAGE HANDLER
 
 
-    handleCreateRoom(ws, msg) {}
-    handleJoinRoom(ws, msg) {}
+    handleCreateRoom(ws, msg) {
+        console.log('hih')
+        const { roomId, username } = msg;
+        
+        if (!username || username.trim() === '') {
+            ws.send(JSON.stringify({ type: 'error', message: 'Invalid username: username must contain non-space character.' }));
+            return;
+        }
+
+        if (!roomId || roomId.trim() === '') {
+            ws.send(JSON.stringify({ type: 'error', message: 'Invalid roomId: roomId must contain non-space character.' }));
+            return;
+        }
+
+        const success = this.roomManager.createRoom(roomId, username);
+        
+        if (!success) {
+            ws.send(JSON.stringify({ 
+                type: 'error', 
+                message: 'Room already exists, please join it or create another one' 
+            }));
+            return;
+        }
+
+        ws.currentRoomId = roomId;
+        ws.currentUsername = username;
+        const key = this.getClientKey(roomId, username);
+        this.clients.set(key, ws);
+
+        // Gửi danh sách thành viên (chỉ có mình), ở client handle như join room
+        ws.send(JSON.stringify({
+            type: 'roomMembers',
+            roomId,
+            members: [username]
+        }));
+
+        console.log(`[${roomId}] ${username} created room`);
+    }
+
+    handleJoinRoom(ws, msg) {
+
+    }
     handleLeaveRoom(ws, msg) {}
     handleJoinCall(ws, msg) {}
     handleLeaveCall(ws, msg) {}
     handleOffer(ws, msg) {}
     handleAnswer(ws, msg) {}
     handleCandidate(ws, msg) {}
+
+
+    // ---------- Helpers ----------
+
+    getClientKey(roomId, username) {
+        return `${roomId}:${username}`;
+    }
+
+    broadcastToRoom(roomId, message, excludeUsername = null) {
+        const members = this.roomManager.getRoomMembers(roomId);
+        for (const username of members) {
+            if (username === excludeUsername) continue;
+            const key = this.getClientKey(roomId, username);
+            const clientWs = this.clients.get(key);
+            if (clientWs && clientWs.readyState === WebSocket.OPEN) {
+                clientWs.send(JSON.stringify(message));
+            }
+        }
+    }
+
 }
 
 module.exports = SignalingHandler;

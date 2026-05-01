@@ -1,27 +1,44 @@
 const WebSocket = require('ws');
 
-const ws = new WebSocket('ws://localhost:3000/ws');
 
-ws.on('open', () => {
-    console.log('Connected to server');
+function testCreateRoom() {
+    const ws = new WebSocket('ws://localhost:3000/ws');
 
-    ws.send(JSON.stringify({
-        type: 'joinRoom',
-        roomId: '123',
-        username: 'testUser'
-    }));
+    function testMsg(msg) {
+        console.log('Sending msg: ', msg);
+        ws.send(msg);
+    }
 
-    ws.send(JSON.stringify({
-        type: 'leaveRoom',
-        roomId: '123',
-        username: 'testUser'
-    }));
-});
 
-ws.on('message', (data) => {
-    console.log('Received:', data.toString());
-});
+    ws.on('open', () => {
+        console.log('Connected to server');
+        // correct
+        testMsg(JSON.stringify({
+            type: 'createRoom',
+            roomId: '123',
+            username: 'testUser'
+        }));
 
-ws.on('close', () => {
-    console.log('Disconnected');
-});
+        // empty username
+        testMsg(JSON.stringify({
+            type: 'createRoom',
+            roomId: '123',
+        }));
+
+        // empty roomid
+        testMsg(JSON.stringify({
+            type: 'createRoom',
+            username: 'testUser'
+        }));
+    });
+
+    ws.on('message', (data) => {
+        console.log('Received:', data.toString());
+    });
+
+    ws.on('close', () => {
+        console.log('Disconnected');
+    });
+}
+
+testCreateRoom();
