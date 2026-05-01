@@ -3,16 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title></title>
+    <title>Video Connect - Join or Create</title>
     <style>
         :root {
             --primary: #2563eb;
             --primary-hover: #1d4ed8;
-            --bg: #f8fafc;
+            --error: #ef4444;
+            --success: #10b981;
+            --bg: #f1f5f9;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
         body { 
-            background: #f1f5f9; 
+            background: linear-gradient(135deg, #a5a5a5 0%, #444444 100%); 
             height: 100vh; display: flex; align-items: center; justify-content: center; 
         }
         .container {
@@ -39,10 +41,17 @@
         }
         input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
         
+        .message {
+            padding: 0.75rem; border-radius: 0.5rem; font-size: 0.85rem; margin-bottom: 1rem; display: none;
+            line-height: 1.4;
+        }
+        .message.error { display: block; background: #fee2e2; color: var(--error); border: 1px solid #fecaca; }
+        .message.success { display: block; background: #d1fae5; color: var(--success); border: 1px solid #a7f3d0; }
+
         .btn {
             width: 100%; padding: 0.8rem; border: none; border-radius: 0.6rem;
             font-weight: 600; font-size: 1rem; cursor: pointer; transition: 0.3s;
-            margin-top: 1rem;
+            margin-top: 0.5rem;
         }
         .btn-primary { background: var(--primary); color: white; }
         .btn-primary:hover { background: var(--primary-hover); }
@@ -51,6 +60,7 @@
         .header { text-align: center; padding: 2rem 2rem 1rem; }
         .header h1 { font-size: 1.5rem; color: #0f172a; }
     </style>
+    <base href="http://localhost:3000/" />
 </head>
 <body>
 
@@ -60,12 +70,14 @@
     </div>
 
     <div class="tabs">
-        <div class="tab active" onclick="switchTab('join')">Join a Room</div>
-        <div class="tab" onclick="switchTab('create')">Create Room</div>
+        <div id="tabJoin" class="tab active" onclick="switchTab('join')">Join Room</div>
+        <div id="tabCreate" class="tab" onclick="switchTab('create')">Create Room</div>
     </div>
 
     <div class="form-content">
-        <form id="joinForm" action="#" method="POST">
+        <div id="responseMsg" class="message"></div>
+
+        <form id="joinForm">
             <div class="input-group">
                 <label>Your Name</label>
                 <input type="text" id="joinName" placeholder="Enter your display name" required>
@@ -77,14 +89,14 @@
             <button type="submit" class="btn btn-primary">Join Room</button>
         </form>
 
-        <form id="createForm" class="hidden" action="#" method="POST">
+        <form id="createForm" class="hidden">
             <div class="input-group">
                 <label>Your Name</label>
                 <input type="text" id="createName" placeholder="Enter your display name" required>
             </div>
             <div class="input-group">
-                <label>Room ID</label>
-                <input type="text" id="createRoom" placeholder="Enter the room ID" required>
+                <label>Custom Room ID</label>
+                <input type="text" id="createRoom" placeholder="Enter your custom room ID" required>
             </div>
             <button type="submit" class="btn btn-primary">Create Room</button>
         </form>
@@ -92,33 +104,84 @@
 </div>
 
 <script>
+    const DOMAiN = "localhost:3000";
+    const ws = new WebSocket(`ws://${window.location.host}/ws`);
+    const msgBox = document.getElementById('responseMsg');
+
+    function showMsg(text, type) {
+        msgBox.textContent = text;
+        msgBox.className = `message ${type}`;
+        msgBox.style.display = 'block';
+    }
+
     function switchTab(type) {
-        const tabs = document.querySelectorAll('.tab');
+        const tabJoin = document.getElementById('tabJoin');
+        const tabCreate = document.getElementById('tabCreate');
         const joinForm = document.getElementById('joinForm');
         const createForm = document.getElementById('createForm');
+        
+        msgBox.style.display = 'none';
 
         if (type === 'join') {
-            tabs[0].classList.add('active');
-            tabs[1].classList.remove('active');
+            tabJoin.classList.add('active');
+            tabCreate.classList.remove('active');
             joinForm.classList.remove('hidden');
             createForm.classList.add('hidden');
         } else {
-            tabs[1].classList.add('active');
-            tabs[0].classList.remove('active');
+            tabCreate.classList.add('active');
+            tabJoin.classList.remove('active');
             createForm.classList.remove('hidden');
             joinForm.classList.add('hidden');
-            
-            document.getElementById('createRoom').value = Math.random().toString(36).substring(2, 10).toUpperCase();
+            document.getElementById('createRoom').value = Math.random().toString(36).substring(2, 8).toUpperCase();
         }
     }
 
+    ws.onmessage = (event) => {
+        console.log('Test: ', event.data);
+        const data = JSON.parse(event.data);
+        console.log('Reiceived: ', data);
+
+        switch(data.type) {
+            case 'roomMembers':
+                showMsg("Success! Redirecting...", "success");
+                sessionStorage.setItem('username', currentUsername);
+                sessionStorage.setItem('roomId', data.roomId);
+                sessionStorage.setItem('members', data.members);
+                setTimeout(() => {
+                    window.location.href = `/room.html`;
+                }, 1000);
+                break;
+            
+            case 'error':
+                showMsg(data.message, "error");
+                break;
+        }
+    };
+
+    let currentUsername = "";
+
     document.getElementById('joinForm').onsubmit = (e) => {
         e.preventDefault();
+        currentUsername = document.getElementById('joinName').value.trim();
+        const roomId = document.getElementById('joinRoom').value.trim().toUpperCase();
+
+        socket.send(JSON.stringify({
+            type: 'joinRoom',
+            payload: { username: currentUsername, roomId }
+        }));
     };
 
     document.getElementById('createForm').onsubmit = (e) => {
         e.preventDefault();
+        currentUsername = document.getElementById('createName').value.trim();
+        const roomId = document.getElementById('createRoom').value.trim().toUpperCase();
+
+        socket.send(JSON.stringify({
+            type: 'createRoom',
+            payload: { username: currentUsername, roomId }
+        }));
     };
+
 </script>
 
 </body>
