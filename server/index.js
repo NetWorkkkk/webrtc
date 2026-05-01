@@ -16,6 +16,7 @@ app.use(express.static(path.join(__dirname, '../public')));
 const signalingHandler = new SignalingHandler();
 
 wss.on('connection', (ws) => {
+    console.log("connected");
     signalingHandler.handleConnection(ws);
 });
 
