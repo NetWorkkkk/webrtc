@@ -1,7 +1,19 @@
+const { memo } = require("react");
+
 class RoomManager {
     constructor() {
         this.roomMembers = new Map(); // roomId -> Set<username>
         this.callMembers = new Map(); // roomId -> Set<username>
+    }
+
+    getRoomMembers(roomId) {
+        const members = this.roomMembers.get(roomId);
+        return members ? Array.from(members) : [];
+    }
+
+    getCallMembers(roomId) {
+        const members = this.callMembers.get(roomId);
+        return members ? Array.from(members) : [];
     }
 
     createRoom(roomId, username) {
@@ -19,48 +31,98 @@ class RoomManager {
         if (!this.roomMembers.has(roomId)) {
             return false;
         }
+
+        const members = this.roomMembers.get(roomId);
         // username exist
-        if (this.roomMembers[roomId].has(username)) {
+        if (members.has(username)) {
             return false;
         }
 
-        this.roomMembers[roomId].add(username);
+        members.add(username);
         return true;
     }
 
     leaveRoom(roomId, username) {
-        // member not in room
-        if (!this.roomMembers[roomId].has(username)) {
+        // room not exist
+        if (!this.roomMembers.has(roomId)) {
             return false;
         }
 
-        this.roomMembers[roomId].delete(username)
+        const members = this.roomMembers.get(roomId);
+        // member not in room
+        if (!members.has(username)) {
+            return false;
+        }
+
+        // try leavel call
+        this.leaveCall(roomId, username);
+
+        members.delete(username)
 
         // all members left -> remove room
-        if (!this.roomMembers[roomId].size) {
+        if (members.size === 0) {
             this.roomMembers.delete(roomId);
         }
         return true;
     }
 
     createCall(roomId, username) {
+        // room not exist
         // username not in room
-        if (!this.roomMembers[roomId].has(username)) {
+        if (!this.roomMembers.has(roomId) ||
+            !this.roomMembers.get(roomId).has(username)) {
             return false;
         }
-        // already calling
-        if (this.callMembers[roomId].size) {
+
+        // call exist
+        if (this.callMembers.has(roomId)) {
             return false;
         }
+
         this.callMembers.set(roomId, new Set([username]));
+        return true;
     }
 
     joinCall(roomId, username) {
+        // room not exist
+        // member not in room
         // call not exist
-        if (!this.callMembers[roomId].size) {
+        if (!this.roomMembers.has(roomId) ||
+            !this.roomMembers.get(roomId).has(username) ||
+            !this.callMembers.has(roomId)) {
             return false;
         }
+
+        const members = this.callMembers.get(roomId);
+        // member in call
+        if (members.has(username)) {
+            return false;
+        }
+
+        members.add(username);
+        return true;
+    }
+
+    leaveCall(roomId, username) {
+        // call not exist
+        if (!this.callMembers.has(roomId)) {
+            return false;
+        }
+
+        const members = this.callMembers.get(roomId);
+        // member not in call
+        if (!members.has(username)) {
+            return false;
+        }
+
+        members.delete(username);
+
+        // all members left -> remove call
+        if (members.size == 0) {
+            this.callMembers.delete(roomId);
+        }
+        return true;
     }
 }
 
-module.exports = new RoomManager();
+module.exports = RoomManager;
