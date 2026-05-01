@@ -146,7 +146,7 @@ class SignalingHandler {
         ws.send(JSON.stringify({
             type: 'roomMembers',
             roomId,
-            members: result.members
+            members: this.roomManager.getRoomMembers(roomId)
         }));
 
         // to all remaining member
@@ -169,7 +169,9 @@ class SignalingHandler {
         console.log(`[${roomId}] ${username} joined room`);
     }
 
-    handleLeaveRoom(ws, msg) {}
+    handleLeaveRoom(ws, msg) {
+
+    }
 
 
     handleJoinCall(ws, msg) {}
