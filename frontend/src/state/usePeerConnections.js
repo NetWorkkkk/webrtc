@@ -135,6 +135,10 @@ export function usePeerConnections({ profileRef, sendMessage }) {
     if (!data.sender || !data.answer) return;
     const pc = peersRef.current.get(data.sender);
     if (!pc) return;
+    // Ignore stale/duplicate answers that can arrive after negotiation is already stable.
+    if (pc.signalingState !== "have-local-offer") {
+      return;
+    }
     await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
   }, []);
 
