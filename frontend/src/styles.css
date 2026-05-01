@@ -1,0 +1,294 @@
+:root {
+  --primary: #2563eb;
+  --danger: #ef4444;
+  --success: #10b981;
+  --text: #0f172a;
+  --muted: #64748b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, Arial, sans-serif;
+  color: var(--text);
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+}
+
+button {
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-weight: 600;
+  background: var(--primary);
+  color: #fff;
+  cursor: pointer;
+}
+
+button.secondary {
+  background: #334155;
+}
+
+button.danger {
+  background: var(--danger);
+}
+
+.notice {
+  padding: 10px 12px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  font-size: 0.92rem;
+}
+
+.notice.error {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.notice.success {
+  background: #dcfce7;
+  color: #14532d;
+}
+
+.page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 460px;
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.title {
+  padding: 20px;
+  text-align: center;
+}
+
+.title h1 {
+  margin: 0;
+}
+
+.title p {
+  margin: 8px 0 0;
+  color: var(--muted);
+}
+
+.tabs {
+  display: flex;
+  border-top: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.tabs button {
+  border-radius: 0;
+  flex: 1;
+  color: var(--muted);
+  background: #f8fafc;
+}
+
+.tabs button.active {
+  color: var(--primary);
+  border-bottom: 3px solid var(--primary);
+  background: #fff;
+}
+
+.panel {
+  padding: 18px 20px 20px;
+}
+
+form {
+  display: grid;
+  gap: 8px;
+}
+
+label {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+input {
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 10px;
+  font-size: 1rem;
+  margin-bottom: 4px;
+}
+
+.room-card {
+  width: 100%;
+  max-width: 980px;
+  min-height: 600px;
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.room-card aside {
+  border-right: 1px solid #e2e8f0;
+  background: #f8fafc;
+  padding: 18px;
+  display: grid;
+  gap: 10px;
+}
+
+.room-card aside h2 {
+  margin: 0;
+}
+
+.room-card aside p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.members {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+  max-height: 330px;
+  overflow: auto;
+}
+
+.member {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.member:last-child {
+  border-bottom: 0;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #94a3b8;
+}
+
+.status-dot.in-call {
+  background: var(--success);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.75);
+}
+
+.room-card main {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.room-info {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.room-info h3 {
+  margin: 0 0 6px;
+}
+
+.room-info p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.room-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.call-fullscreen {
+  min-height: 100vh;
+  width: 100%;
+  background: #020617;
+  color: #f8fafc;
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+.call-header {
+  padding: 14px 20px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.call-header h1 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.call-header p {
+  margin: 5px 0 0;
+  color: #cbd5e1;
+}
+
+.video-grid {
+  padding: 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+  align-content: start;
+}
+
+.video-tile {
+  background: #0f172a;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.video-tile header {
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.3);
+  color: #cbd5e1;
+  font-size: 0.85rem;
+}
+
+.video-tile video {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  display: block;
+  object-fit: cover;
+  background: #000;
+}
+
+.empty-video {
+  border: 1px dashed rgba(148, 163, 184, 0.5);
+  border-radius: 12px;
+  padding: 20px;
+  color: #cbd5e1;
+}
+
+@media (max-width: 880px) {
+  .room-card {
+    grid-template-columns: 1fr;
+  }
+
+  .room-card aside {
+    border-right: 0;
+    border-bottom: 1px solid #e2e8f0;
+  }
+}
