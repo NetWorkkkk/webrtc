@@ -22,7 +22,9 @@ export function AppProvider({ children }) {
   const wsRef = useRef(null);
   const profileRef = useRef(profile);
   const inCallRef = useRef(inCall);
+  const callMembersRef = useRef(callMembers);
   const pendingCallJoinRef = useRef(pendingCallJoin);
+  const lastRingAtRef = useRef(0);
   const runtimeRef = useRef(null);
 
   useEffect(() => {
@@ -32,6 +34,10 @@ export function AppProvider({ children }) {
   useEffect(() => {
     inCallRef.current = inCall;
   }, [inCall]);
+
+  useEffect(() => {
+    callMembersRef.current = callMembers;
+  }, [callMembers]);
 
   useEffect(() => {
     pendingCallJoinRef.current = pendingCallJoin;
@@ -68,6 +74,48 @@ export function AppProvider({ children }) {
     closeAllPeers();
     stopLocalMedia();
   }, [closeAllPeers, stopLocalMedia]);
+
+  const ringIncomingCallNotification = useCallback((callerName) => {
+    setNotice({
+      type: "success",
+      text: `${callerName} started a call. Join when you're ready.`,
+    });
+
+    const now = Date.now();
+    if (now - lastRingAtRef.current < 5000) return;
+    lastRingAtRef.current = now;
+
+    try {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) return;
+
+      const audioContext = new AudioContextClass();
+      const baseTime = audioContext.currentTime;
+      const playBeep = (startOffset) => {
+        const oscillator = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        oscillator.type = "sine";
+        oscillator.frequency.value = 880;
+        gain.gain.setValueAtTime(0.0001, baseTime + startOffset);
+        gain.gain.exponentialRampToValueAtTime(0.2, baseTime + startOffset + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, baseTime + startOffset + 0.22);
+        oscillator.connect(gain);
+        gain.connect(audioContext.destination);
+        oscillator.start(baseTime + startOffset);
+        oscillator.stop(baseTime + startOffset + 0.24);
+      };
+
+      playBeep(0);
+      playBeep(0.32);
+      playBeep(0.64);
+
+      setTimeout(() => {
+        audioContext.close().catch(() => {});
+      }, 1500);
+    } catch {
+      // Ignore browser audio autoplay limitations.
+    }
+  }, []);
 
   useEffect(() => {
     runtimeRef.current = {
@@ -146,63 +194,38 @@ export function AppProvider({ children }) {
           break;
 
         case "callMembers":
-          if (Array.isArray(data.members)) {
-            setCallMembers(data.members);
-            if (pendingCallJoinRef.current) {
-              const peers = data.members.filter((name) => name !== profileRef.current.username);
-              for (const peerName of peers) {
-                await runtimeRef.current?.initiateOfferToPeer(peerName);
-              }
-              setPendingCallJoin(false);
+          setCallMembers(data.members);
+          if (pendingCallJoinRef.current) {
+            const peers = data.members.filter((name) => name !== profileRef.current.username);
+            for (const peerName of peers) {
+              await runtimeRef.current?.initiateOfferToPeer(peerName); // offer to each peer
             }
+            setPendingCallJoin(false);
           }
           break;
         case "memberJoinCall":
-          if (data.username) {
-            setCallMembers((prev) => (prev.includes(data.username) ? prev : [...prev, data.username]));
-            if (inCallRef.current && data.username !== profileRef.current.username) {
-              await runtimeRef.current?.initiateOfferToPeer(data.username);
-            }
+          const firstCallMember = callMembersRef.current.length === 0;
+          setCallMembers((prev) => (prev.includes(data.username) ? prev : [...prev, data.username]));
+          if (data.username === profileRef.current.username) {
+            return;
+          }
+          // in call and not the first call member, offer to the new member
+          if (inCallRef.current) {
+            await runtimeRef.current?.initiateOfferToPeer(data.username);
+          }
+          // out of call and not the first call member, ring the notification
+          if (!inCallRef.current && firstCallMember) {
+            ringIncomingCallNotification(data.username);
           }
           break;
         case "memberLeftCall":
-          if (data.username) {
-            setCallMembers((prev) => prev.filter((name) => name !== data.username));
-            runtimeRef.current?.closePeer(data.username);
-          }
+          setCallMembers((prev) => prev.filter((name) => name !== data.username));
+          runtimeRef.current?.closePeer(data.username);
           break;
+          
         case "offer":
           if (!data.sender || data.sender === profileRef.current.username) break;
-          if (!data.offer) {
-            const accepted = window.confirm(
-              `${data.sender} started a group call. Do you want to join?`
-            );
-            const { roomId, username } = profileRef.current;
-            runtimeRef.current?.sendMessage({
-              type: "answer",
-              roomId,
-              sender: username,
-              target: data.sender,
-              accepted,
-            });
-
-            if (accepted) {
-              try {
-                await runtimeRef.current?.ensureLocalMedia();
-                setInCall(true);
-                setPendingCallJoin(true);
-                setCallMembers((prev) =>
-                  prev.includes(username) ? prev : [...prev, username]
-                );
-                runtimeRef.current?.sendMessage({ type: "joinCall", roomId, username });
-                runtimeRef.current?.navigate("/call");
-              } catch {
-                setNotice({ type: "error", text: "Unable to access camera/microphone." });
-              }
-            }
-          } else {
-            await runtimeRef.current?.handleOfferSdp(data);
-          }
+          await runtimeRef.current?.handleOfferSdp(data);
           break;
         case "answer":
           await runtimeRef.current?.handleAnswer(data);
@@ -259,11 +282,10 @@ export function AppProvider({ children }) {
       setPendingCallJoin(true);
       setCallMembers((prev) => (prev.includes(username) ? prev : [...prev, username]));
 
-      sendMessage({ type: "offer", roomId, sender: username });
-      sendMessage({ type: "joinCall", roomId, username });
+      sendMessage({ type: "startCall", roomId, username });
       navigate("/call");
     } catch {
-      setNotice({ type: "error", text: "Unable to access camera/microphone." });
+      setNotice({ type: "error", text: "Please allow access to camera/microphone." });
     }
   }, [ensureLocalMedia, navigate, sendMessage]);
 
@@ -277,7 +299,7 @@ export function AppProvider({ children }) {
       sendMessage({ type: "joinCall", roomId, username });
       navigate("/call");
     } catch {
-      setNotice({ type: "error", text: "Unable to access camera/microphone." });
+      setNotice({ type: "error", text: "Please allow access to camera/microphone." });
     }
   }, [ensureLocalMedia, navigate, sendMessage]);
 
