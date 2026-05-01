@@ -115,7 +115,7 @@ class SignalingHandler {
             return;
         }
 
-        if (!roomId) {
+        if (!roomId || roomId.trim() === '') {
             ws.send(JSON.stringify({ type: 'error', message: 'Invalid roomId: roomId must contain non-space character.' }));
             return;
         }
@@ -123,17 +123,10 @@ class SignalingHandler {
         const result = this.roomManager.joinRoom(roomId, username);
         
         if (!result.success) {
-            if (result.error === 'room not exist') {
-                ws.send(JSON.stringify({ 
-                    type: 'error', 
-                    message: 'Room not found, please create or join another one' 
-                }));
-            } else if (result.error === 'username exist') {
-                ws.send(JSON.stringify({ 
-                    type: 'error', 
-                    message: 'Username already taken in this room, please choose another name' 
-                }));
-            }
+            ws.send(JSON.stringify({ 
+                type: 'error', 
+                message: result.error
+            }));
             return;
         }
 
@@ -170,7 +163,46 @@ class SignalingHandler {
     }
 
     handleLeaveRoom(ws, msg) {
+        console.log(ws.currentRoomId, ws.currentUsername)
+        if (ws.currentRoomId === null || ws.currentUsername === null) {
+            ws.send(JSON.stringify({ type: 'error', message: 'User must be in a room before leaving.' }));
+            return;
+        }
 
+        const { roomId, username } = msg;
+        console.log(roomId, username);
+
+        if (ws.currentRoomId !== roomId || ws.currentUsername !== username) {
+            ws.send(JSON.stringify({ type: 'error', message: 'RoomId or username does not match the current socket' }));
+            return;
+        }
+
+        const result = this.roomManager.leaveRoom(roomId, username);
+        
+        if (!result.success) {
+            ws.send(JSON.stringify({ 
+                type: 'error', 
+                message: result.error
+            }));
+            return
+        }
+
+        // delete the ws from map
+        const key = this.getClientKey(roomId, username);
+        this.clients.delete(key);
+
+        // broadcast memberLeftRoom for remaining members
+        this.broadcastToRoom(roomId, {
+            type: 'memberLeftRoom',
+            roomId,
+            username: username
+        });
+
+        // remove roomId & username in ws
+        ws.currentRoomId = null;
+        ws.currentUsername = null;
+
+        console.log(`[${roomId}] ${username} left room`);
     }
 
 
