@@ -210,10 +210,6 @@ export function AppProvider({ children }) {
           if (data.username === profileRef.current.username) {
             return;
           }
-          // in call and not the first call member, offer to the new member
-          if (inCallRef.current) {
-            await runtimeRef.current?.initiateOfferToPeer(data.username);
-          }
           // out of call and not the first call member, ring the notification
           if (!inCallRef.current && firstCallMember) {
             ringIncomingCallNotification(data.username);
@@ -226,13 +222,16 @@ export function AppProvider({ children }) {
           break;
           
         case "offer":
+          console.log('offer', data);
           if (!data.sender || data.sender === profileRef.current.username) break;
           await runtimeRef.current?.handleOfferSdp(data);
           break;
         case "answer":
+          console.log('answer', data);
           await runtimeRef.current?.handleAnswer(data);
           break;
         case "candidate":
+          console.log('candidate', data);
           await runtimeRef.current?.handleCandidate(data);
           break;
         case "error":
@@ -281,7 +280,7 @@ export function AppProvider({ children }) {
     try {
       await ensureLocalMedia();
       setInCall(true);
-      setPendingCallJoin(true);
+      setPendingCallJoin(false);
       setCallMembers((prev) => (prev.includes(username) ? prev : [...prev, username]));
 
       sendMessage({ type: "startCall", roomId, username });
