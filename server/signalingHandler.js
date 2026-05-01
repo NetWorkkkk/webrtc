@@ -364,10 +364,11 @@ class SignalingHandler {
             return;
         }
         
-        const { roomId, username } = msg;
+        const { roomId, sender } = msg;
+        console.log(roomId, sender);
 
-        if (ws.currentRoomId !== roomId || ws.currentUsername !== username) {
-            ws.send(JSON.stringify({ type: 'error', message: 'RoomId or username does not match the current socket' }));
+        if (ws.currentRoomId !== roomId || ws.currentUsername !== sender) {
+            ws.send(JSON.stringify({ type: 'error', message: 'RoomId or sender does not match the current socket' }));
             return;
         }
 
@@ -384,9 +385,9 @@ class SignalingHandler {
             
             targetSocket.send(JSON.stringify({
                 ...msg,
-                sender: username 
+                sender: sender,
             }));
-            console.log(`[Signaling] ${type} from ${username} -> ${target}`);
+            console.log(`[Signaling] ${type} from ${sender} -> ${target}`);
         } else {
             ws.send(JSON.stringify({
                 type: 'ERROR',
