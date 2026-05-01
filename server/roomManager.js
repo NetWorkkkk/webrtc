@@ -59,7 +59,7 @@ class RoomManager {
         return { success: true };
     }
 
-    createCall(roomId, username) {
+    startCall(roomId, username) {
         if (!this.roomMembers.has(roomId)) {
             return { success: false, error: 'room not exist' };
         }

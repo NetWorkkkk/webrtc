@@ -1,0 +1,17 @@
+:root { --primary: #2563eb; --danger: #ef4444; --success: #10b981; }
+body { font-family: 'Inter', sans-serif; background: #f1f5f9; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+.room-card { background: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 450px; text-align: center; }
+.header { margin-bottom: 1.5rem; }
+.header h1 { font-size: 1.5rem; color: #1e293b; margin: 0; }
+.header p { color: #64748b; font-size: 0.9rem; }
+
+.member-list { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.5rem; padding: 1rem; text-align: left; max-height: 200px; overflow-y: auto; margin-bottom: 1.5rem; }
+.member-item { display: flex; align-items: center; gap: 10px; padding: 5px 0; border-bottom: 1px solid #f1f5f9; }
+.status-dot { width: 10px; height: 10px; border-radius: 50%; background: #cbd5e1; }
+.status-dot.incall { background: var(--success); box-shadow: 0 0 8px var(--success); }
+
+.actions { display: flex; flex-direction: column; gap: 10px; }
+.btn { padding: 0.8rem; border: none; border-radius: 0.5rem; font-weight: 600; cursor: pointer; transition: 0.3s; }
+#btnCallAction { background: var(--primary); color: white; }
+#btnLeave { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
+#btnLeave:hover { background: var(--danger); color: white; }

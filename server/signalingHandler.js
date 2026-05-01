@@ -31,7 +31,26 @@ class SignalingHandler {
         });
     }
 
-    handleDisconnect(ws, msg) {}
+    handleDisconnect(ws, msg) {
+        if (ws.currentRoomId && ws.currentUsername) {
+            const roomId = ws.currentRoomId;
+            const username = ws.currentUsername;
+            
+            if (this.roomManager.getCallMembers(roomId).includes(username)) {
+                // try leave call
+                // this.handleLeaveCall(ws, { roomId, username });
+            }
+
+            // leave room
+            if (this.roomManager.getRoomMembers(roomId).includes(username)) {
+                this.handleLeaveRoom(ws, { roomId, username });
+            }
+            
+            console.log(`[${roomId}] ${username} disconnected and left room`);
+        } else {
+            console.log(`A user disconnected`);
+        }         
+    }
 
     handleMessage(ws, msg) {
         const { type } = msg;
@@ -45,6 +64,9 @@ class SignalingHandler {
                 break;
             case 'leaveRoom':
                 this.handleLeaveRoom(ws, msg);
+                break;
+            case 'startCall':
+                this.handleStartCall(ws, msg);
                 break;
             case 'joinCall':
                 this.handleJoinCall(ws, msg);
@@ -63,6 +85,7 @@ class SignalingHandler {
                 break;
             default:
                 console.warn('Unknown message type:', type);
+                console.log("ROOM MANAGER:", this.roomManager);
         }
     }
 
@@ -205,12 +228,68 @@ class SignalingHandler {
         console.log(`[${roomId}] ${username} left room`);
     }
 
+    handleStartCall(ws, msg) {
+        console.log("User startCall (ws):", ws.currentRoomId, ws.currentUsername);
+        if (ws.currentRoomId === null || ws.currentUsername === null) {
+            ws.send(JSON.stringify({ type: 'error', message: 'User must be in a room before starting a call.' }));
+            return;
+        }
 
-    handleJoinCall(ws, msg) {}
+        if (this.roomManager.getCallMembers(ws.currentRoomId).length > 0) {
+            ws.send(JSON.stringify({ type: 'error', message: 'A call is already active in this room.' }));
+            return;
+        }
+
+        const { roomId, username } = msg;
+        console.log(roomId, username);
+
+        if (ws.currentRoomId !== roomId || ws.currentUsername !== username) {
+            ws.send(JSON.stringify({ type: 'error', message: 'RoomId or username does not match the current socket' }));
+            return;
+        }
+
+        const result = this.roomManager.startCall(roomId, username);
+        
+        if (!result.success) {
+            ws.send(JSON.stringify({ 
+                type: 'error', 
+                message: result.error
+            }));
+            return
+        }
+
+        // broadcast memberLeftRoom for remaining members
+        this.broadcastToRoom(roomId, {
+            type: 'memberLeftRoom',
+            roomId,
+            username: username
+        });
+
+        // remove roomId & username in ws
+        ws.currentRoomId = null;
+        ws.currentUsername = null;
+
+        console.log(`[${roomId}] ${username} left room`);
+    }
+    
+
+    handleJoinCall(ws, msg) {
+
+    }
+
     handleLeaveCall(ws, msg) {}
-    handleOffer(ws, msg) {}
-    handleAnswer(ws, msg) {}
-    handleCandidate(ws, msg) {}
+
+    handleOffer(ws, msg) {
+        this.handleSignaling(ws, msg, 'offer');
+    }
+
+    handleAnswer(ws, msg) {
+        this.handleSignaling(ws, msg, 'answer');
+    }
+
+    handleCandidate(ws, msg) {
+        this.handleSignaling(ws, msg, 'candidate');
+    }
 
 
     // ---------- Helpers ----------
@@ -228,6 +307,50 @@ class SignalingHandler {
             if (clientWs && clientWs.readyState === WebSocket.OPEN) {
                 clientWs.send(JSON.stringify(message));
             }
+        }
+    }
+
+    handleSignaling(ws, msg, handleType) {
+        console.log("User startCall (ws):", ws.currentRoomId, ws.currentUsername);
+        if (ws.currentRoomId === null || ws.currentUsername === null) {
+            ws.send(JSON.stringify({ type: 'error', message: 'User must be in a room before sending ' + handleType + '.' }));
+            return;
+        }
+
+        if (!this.roomManager.getCallMembers(ws.currentRoomId)) {
+            ws.send(JSON.stringify({ type: 'error', message: 'No active call in this room.' }));
+            return;
+        }
+        
+        const { roomId, username } = msg;
+        console.log(roomId, username);
+
+        if (ws.currentRoomId !== roomId || ws.currentUsername !== username) {
+            ws.send(JSON.stringify({ type: 'error', message: 'RoomId or username does not match the current socket' }));
+            return;
+        }
+
+        const { target, type } = msg;
+
+        if (!target) {
+            ws.send(JSON.stringify({ type: 'error', message: 'Target username is required for ' + handleType + ' message.' }));
+            return;
+        }
+
+        const targetSocket = this.clients.get(this.getClientKey(ws.currentRoomId, target));
+
+        if (targetSocket && targetSocket.readyState === WebSocket.OPEN) {
+            
+            targetSocket.send(JSON.stringify({
+                ...msg,
+                sender: username 
+            }));
+            console.log(`[Signaling] ${type} from ${username} -> ${target}`);
+        } else {
+            ws.send(JSON.stringify({
+                type: 'ERROR',
+                message: `User ${target} is not available.`
+            }));
         }
     }
 
