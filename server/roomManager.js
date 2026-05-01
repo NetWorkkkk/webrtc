@@ -15,41 +15,36 @@ class RoomManager {
     }
 
     createRoom(roomId, username) {
-        // room exist
         if (this.roomMembers.has(roomId)) {
-            return false;
+            return { success: false, error: 'room exist' };
         }
 
         this.roomMembers.set(roomId, new Set([username]))
-        return true;
+        return { success: true };
     }
 
     joinRoom(roomId, username) {
-        // room not exist
         if (!this.roomMembers.has(roomId)) {
-            return false;
+            return { success: false, error: 'room not exist' };
         }
 
         const members = this.roomMembers.get(roomId);
-        // username exist
         if (members.has(username)) {
-            return false;
+            return { success: false, error: 'username exist' };
         }
 
         members.add(username);
-        return true;
+        return { success: true };
     }
 
     leaveRoom(roomId, username) {
-        // room not exist
         if (!this.roomMembers.has(roomId)) {
-            return false;
+            return { success: false, error: 'room not exist' };
         }
 
         const members = this.roomMembers.get(roomId);
-        // member not in room
         if (!members.has(username)) {
-            return false;
+            return { success: false, error: 'member not in room' };
         }
 
         // try leavel call
@@ -61,65 +56,62 @@ class RoomManager {
         if (members.size === 0) {
             this.roomMembers.delete(roomId);
         }
-        return true;
+        return { success: true };
     }
 
     createCall(roomId, username) {
-        // room not exist
-        // username not in room
-        if (!this.roomMembers.has(roomId) ||
-            !this.roomMembers.get(roomId).has(username)) {
-            return false;
+        if (!this.roomMembers.has(roomId)) {
+            return { success: false, error: 'room not exist' };
+        }
+        if (!this.roomMembers.get(roomId).has(username)) {
+            return { success: false, error: 'username not in room' }
         }
 
-        // call exist
         if (this.callMembers.has(roomId)) {
-            return false;
+            return { success: false, error: 'call exist' };
         }
 
         this.callMembers.set(roomId, new Set([username]));
-        return true;
+        return { success: true };
     }
 
     joinCall(roomId, username) {
-        // room not exist
-        // member not in room
-        // call not exist
-        if (!this.roomMembers.has(roomId) ||
-            !this.roomMembers.get(roomId).has(username) ||
-            !this.callMembers.has(roomId)) {
-            return false;
+        if (!this.roomMembers.has(roomId)) {
+            return { success: false, error: 'room not exist' };
+        }
+        if (!this.roomMembers.get(roomId).has(username)) {
+            return { success: false, error: 'member not in room' };
+        }
+        if (!this.callMembers.has(roomId)) {
+            return { success: false, error: 'call not exist' };
         }
 
         const members = this.callMembers.get(roomId);
-        // member in call
         if (members.has(username)) {
-            return false;
+            return { success: false, error: 'member in call' };
         }
 
         members.add(username);
-        return true;
+        return { success: true };
     }
 
     leaveCall(roomId, username) {
-        // call not exist
         if (!this.callMembers.has(roomId)) {
-            return false;
+            return { success: false, error: 'call not exist' };
         }
 
         const members = this.callMembers.get(roomId);
-        // member not in call
         if (!members.has(username)) {
-            return false;
+            return { success: false, error: 'member not in call' };
         }
 
         members.delete(username);
 
         // all members left -> remove call
-        if (members.size == 0) {
+        if (members.size === 0) {
             this.callMembers.delete(roomId);
         }
-        return true;
+        return { success: true };
     }
 }
 
