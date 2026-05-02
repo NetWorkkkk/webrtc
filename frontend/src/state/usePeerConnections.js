@@ -6,6 +6,7 @@ export function usePeerConnections({ profileRef, sendMessage }) {
   const localStreamRef = useRef(null);
   const [localStream, setLocalStream] = useState(null);
   const [remoteStreams, setRemoteStreams] = useState({});
+  const [peerStatuses, setPeerStatuses] = useState({});
 
   useEffect(() => {
     localStreamRef.current = localStream;
@@ -31,6 +32,12 @@ export function usePeerConnections({ profileRef, sendMessage }) {
       delete next[peerName];
       return next;
     });
+    setPeerStatuses((prev) => {
+      if (!prev[peerName]) return prev;
+      const next = { ...prev };
+      delete next[peerName];
+      return next;
+    });
   }, []);
 
   const closeAllPeers = useCallback(() => {
@@ -39,6 +46,7 @@ export function usePeerConnections({ profileRef, sendMessage }) {
     }
     peersRef.current.clear();
     setRemoteStreams({});
+    setPeerStatuses({});
   }, []);
 
   const ensureLocalMedia = useCallback(async () => {
@@ -81,9 +89,14 @@ export function usePeerConnections({ profileRef, sendMessage }) {
       const remoteStream = new MediaStream();
 
       pc.ontrack = (event) => {
-        console.log('ontrack', event);
         event.streams[0].getTracks().forEach((track) => remoteStream.addTrack(track));
         setRemoteStreams((prev) => ({ ...prev, [peerName]: remoteStream }));
+        setPeerStatuses((prev) => {
+          if (!prev[peerName]) return prev;
+          const next = { ...prev };
+          delete next[peerName];
+          return next;
+        });
       };
 
       pc.onicecandidate = (event) => {
@@ -102,8 +115,14 @@ export function usePeerConnections({ profileRef, sendMessage }) {
         console.log('[log]', pc.connectionState);
         if (pc.connectionState === "connected") {
           detectConnectionType(pc);
+          setPeerStatuses((prev) => {
+            if (!prev[peerName]) return prev;
+            const next = { ...prev };
+            delete next[peerName];
+            return next;
+          });
         } else if (["failed", "closed", "disconnected"].includes(pc.connectionState)) {
-          closePeer(peerName);
+          setPeerStatuses((prev) => ({ ...prev, [peerName]: pc.connectionState }));
         }
       };
 
@@ -191,6 +210,7 @@ export function usePeerConnections({ profileRef, sendMessage }) {
   return {
     localStream,
     remoteStreams,
+    peerStatuses,
     closePeer,
     closeAllPeers,
     stopLocalMedia,

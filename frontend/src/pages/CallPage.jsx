@@ -3,7 +3,7 @@ import { useAppState } from "../state/appContext";
 import { VideoGrid } from "../components/VideoGrid";
 
 export function CallPage() {
-  const { profile, inCall, leaveCall, callMembers, localStream, remoteStreams } = useAppState();
+  const { profile, inCall, leaveCall, callMembers, localStream, remoteStreams, peerStatuses } = useAppState();
 
   if (!profile.joined) {
     return <Navigate to="/" replace />;
@@ -27,7 +27,7 @@ export function CallPage() {
         </button>
       </header>
 
-      <VideoGrid localStream={localStream} remoteStreams={remoteStreams} myName={profile.username} />
+      <VideoGrid localStream={localStream} remoteStreams={remoteStreams} peerStatuses={peerStatuses} myName={profile.username} />
     </div>
   );
 }

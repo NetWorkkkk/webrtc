@@ -57,6 +57,7 @@ export function AppProvider({ children }) {
   const {
     localStream,
     remoteStreams,
+    peerStatuses,
     closePeer,
     closeAllPeers,
     stopLocalMedia,
@@ -331,6 +332,7 @@ export function AppProvider({ children }) {
       callLive,
       localStream,
       remoteStreams,
+      peerStatuses,
       joinRoom,
       createRoom,
       startCall,
@@ -349,6 +351,7 @@ export function AppProvider({ children }) {
       callLive,
       localStream,
       remoteStreams,
+      peerStatuses,
       joinRoom,
       createRoom,
       startCall,
