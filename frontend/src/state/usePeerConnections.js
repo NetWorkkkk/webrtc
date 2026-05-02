@@ -121,8 +121,12 @@ export function usePeerConnections({ profileRef, sendMessage }) {
             delete next[peerName];
             return next;
           });
-        } else if (["failed", "closed", "disconnected"].includes(pc.connectionState)) {
+        } else if (["failed", "disconnected"].includes(pc.connectionState)) {
           setPeerStatuses((prev) => ({ ...prev, [peerName]: pc.connectionState }));
+          const { roomId } = profileRef.current;
+          sendMessage({ type: "checkPeer", roomId, peerName });
+        } else if (pc.connectionState === "closed") {
+          setPeerStatuses((prev) => ({ ...prev, [peerName]: "closed" }));
         }
       };
 

@@ -83,6 +83,9 @@ class SignalingHandler {
             case 'candidate':
                 this.handleCandidate(ws, msg);
                 break;
+            case 'checkPeer':
+                this.handleCheckPeer(ws, msg);
+                break;
             default:
                 console.warn('Unknown message type:', type);
                 console.log("ROOM MANAGER:", this.roomManager);
@@ -321,6 +324,44 @@ class SignalingHandler {
         });
 
         console.log(`[${roomId}] ${username} left call`);
+    }
+
+    handleCheckPeer(ws, msg) {
+        const { roomId, peerName } = msg;
+
+        if (!roomId || !peerName) return;
+
+        const evictFromCall = () => {
+            const result = this.roomManager.leaveCall(roomId, peerName);
+            if (result.success) {
+                this.broadcastToRoom(roomId, { type: 'memberLeaveCall', roomId, username: peerName });
+                console.log(`[${roomId}] checkPeer: ${peerName} evicted from call`);
+            }
+        };
+
+        // Step 1: peer not in call → evict immediately
+        if (!this.roomManager.getCallMembers(roomId).includes(peerName)) {
+            return;
+        }
+
+        // Step 2: peer's WebSocket is gone or closing → evict immediately
+        const peerWs = this.clients.get(this.getClientKey(roomId, peerName));
+        if (!peerWs || peerWs.readyState !== WebSocket.OPEN) {
+            return;
+        }
+
+        // Step 3: ping the peer, wait 5s for pong
+        let ponged = false;
+        const onPong = () => { ponged = true; };
+        peerWs.once('pong', onPong);
+        peerWs.ping();
+
+        setTimeout(() => {
+            peerWs.removeListener('pong', onPong);
+            if (!ponged) {
+                evictFromCall();
+            }
+        }, 5000);
     }
 
     handleOffer(ws, msg) {
