@@ -48,6 +48,28 @@ export function usePeerConnections({ profileRef, sendMessage }) {
     return stream;
   }, []);
 
+  async function detectConnectionType(pc) {
+    const stats = await pc.getStats();
+    console.log('stats', stats);
+
+    stats.forEach(report => {
+        if (report.type === "candidate-pair" && report.state === "succeeded") {
+            const local = stats.get(report.localCandidateId);
+            const remote = stats.get(report.remoteCandidateId);
+
+            if (!local || !remote) return;
+
+            let type = "P2P";
+
+            if (local.candidateType === "relay" || remote.candidateType === "relay") {
+                type = "TURN (relay)";
+            }
+
+            console.log('type', type);
+        }
+    });
+  }
+
   const createPeerConnection = useCallback(
     (peerName) => {
       if (peersRef.current.has(peerName)) {
@@ -55,6 +77,7 @@ export function usePeerConnections({ profileRef, sendMessage }) {
       }
 
       const pc = new RTCPeerConnection(rtcConfig);
+      console.log('[log]', pc.connectionState);
       const remoteStream = new MediaStream();
 
       pc.ontrack = (event) => {
@@ -75,8 +98,11 @@ export function usePeerConnections({ profileRef, sendMessage }) {
         });
       };
 
-      pc.onconnectionstatechange = () => {
-        if (["failed", "closed", "disconnected"].includes(pc.connectionState)) {
+      pc.onconnectionstatechange = async () => {   
+        console.log('[log]', pc.connectionState);
+        if (pc.connectionState === "connected") {
+          detectConnectionType(pc);
+        } else if (["failed", "closed", "disconnected"].includes(pc.connectionState)) {
           closePeer(peerName);
         }
       };
