@@ -185,7 +185,7 @@ export function AppProvider({ children }) {
             setRoomMembers((prev) => (prev.includes(data.username) ? prev : [...prev, data.username]));
           }
           break;
-        case "memberLeftRoom":
+        case "memberLeaveRoom":
           if (data.username) {
             setRoomMembers((prev) => prev.filter((name) => name !== data.username));
             setCallMembers((prev) => prev.filter((name) => name !== data.username));
@@ -222,16 +222,13 @@ export function AppProvider({ children }) {
           break;
           
         case "offer":
-          console.log('offer', data);
           if (!data.sender || data.sender === profileRef.current.username) break;
           await runtimeRef.current?.handleOfferSdp(data);
           break;
         case "answer":
-          console.log('answer', data);
           await runtimeRef.current?.handleAnswer(data);
           break;
         case "candidate":
-          console.log('candidate', data);
           await runtimeRef.current?.handleCandidate(data);
           break;
         case "error":

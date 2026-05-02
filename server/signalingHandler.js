@@ -214,9 +214,9 @@ class SignalingHandler {
         const key = this.getClientKey(roomId, username);
         this.clients.delete(key);
 
-        // broadcast memberLeftRoom for remaining members
+        // broadcast memberLeaveRoom for remaining members
         this.broadcastToRoom(roomId, {
-            type: 'memberLeftRoom',
+            type: 'memberLeaveRoom',
             roomId,
             username: username
         });
