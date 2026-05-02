@@ -58,6 +58,7 @@ export function usePeerConnections({ profileRef, sendMessage }) {
       const remoteStream = new MediaStream();
 
       pc.ontrack = (event) => {
+        console.log('ontrack', event);
         event.streams[0].getTracks().forEach((track) => remoteStream.addTrack(track));
         setRemoteStreams((prev) => ({ ...prev, [peerName]: remoteStream }));
       };
