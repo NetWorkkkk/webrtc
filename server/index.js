@@ -12,13 +12,32 @@ const wss = new WebSocket.Server({ server, path: "/ws" });
 
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Khởi tạo signaling handler
 const signalingHandler = new SignalingHandler();
+
+const HEARTBEAT_INTERVAL_MS = 30000;
 
 wss.on('connection', (ws) => {
     console.log("connected");
+    ws.isAlive = true;
+    ws.on('pong', () => { ws.isAlive = true; });
     signalingHandler.handleConnection(ws);
 });
+
+// Ping all clients every 30s. No pong back → abrupt disconnect → terminate.
+// ws.terminate() fires the 'close' event, so handleDisconnect runs as normal.
+const heartbeat = setInterval(() => {
+    wss.clients.forEach((ws) => {
+        if (!ws.isAlive) {
+            console.log('[Heartbeat] client unresponsive, terminating');
+            ws.terminate();
+            return;
+        }
+        ws.isAlive = false;
+        ws.ping();
+    });
+}, HEARTBEAT_INTERVAL_MS);
+
+wss.on('close', () => clearInterval(heartbeat));
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
