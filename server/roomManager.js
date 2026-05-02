@@ -47,9 +47,6 @@ class RoomManager {
             return { success: false, error: 'member not in room' };
         }
 
-        // try leavel call
-        this.leaveCall(roomId, username);
-
         members.delete(username)
 
         // all members left -> remove room

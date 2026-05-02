@@ -38,7 +38,7 @@ class SignalingHandler {
             
             if (this.roomManager.getCallMembers(roomId).includes(username)) {
                 // try leave call
-                // this.handleLeaveCall(ws, { roomId, username });
+                this.handleLeaveCall(ws, { roomId, username });
             }
 
             // leave room
