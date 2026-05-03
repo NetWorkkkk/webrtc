@@ -17,7 +17,6 @@ const signalingHandler = new SignalingHandler();
 const HEARTBEAT_INTERVAL_MS = 30000;
 
 wss.on('connection', (ws) => {
-    console.log("connected");
     ws.isAlive = true;
     ws.on('pong', () => { ws.isAlive = true; });
     signalingHandler.handleConnection(ws);

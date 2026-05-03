@@ -205,7 +205,6 @@ export function AppProvider({ children }) {
           }
           break;
         case "memberJoinCall":
-          console.log('memberJoinCall', data);
           const firstCallMember = callMembersRef.current.length === 0;
           setCallMembers((prev) => (prev.includes(data.username) ? prev : [...prev, data.username]));
           if (data.username === profileRef.current.username) {
@@ -217,7 +216,6 @@ export function AppProvider({ children }) {
           }
           break;
         case "memberLeaveCall":
-          console.log('memberLeaveCall', data);
           setCallMembers((prev) => prev.filter((name) => name !== data.username));
           runtimeRef.current?.closePeer(data.username);
           break;

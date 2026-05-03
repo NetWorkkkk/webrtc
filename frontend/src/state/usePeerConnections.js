@@ -4,9 +4,11 @@ import { rtcConfig } from "../config/rtcConfig";
 export function usePeerConnections({ profileRef, sendMessage }) {
   const peersRef = useRef(new Map());
   const localStreamRef = useRef(null);
+  const callStartTimesRef = useRef({});
   const [localStream, setLocalStream] = useState(null);
   const [remoteStreams, setRemoteStreams] = useState({});
   const [peerStatuses, setPeerStatuses] = useState({});
+  // peerStatuses[name] = { connectionState, iceConnectionState, connectionType }
 
   useEffect(() => {
     localStreamRef.current = localStream;
@@ -21,6 +23,12 @@ export function usePeerConnections({ profileRef, sendMessage }) {
   }, []);
 
   const closePeer = useCallback((peerName) => {
+    const startTime = callStartTimesRef.current[peerName];
+    if (startTime) {
+      const duration = Math.round((Date.now() - startTime) / 1000);
+      console.log(`[Call ■] ${peerName} | ended @ ${new Date().toLocaleTimeString()} | duration: ${duration}s`);
+      delete callStartTimesRef.current[peerName];
+    }
     const pc = peersRef.current.get(peerName);
     if (pc) {
       pc.close();
@@ -58,24 +66,27 @@ export function usePeerConnections({ profileRef, sendMessage }) {
 
   async function detectConnectionType(pc) {
     const stats = await pc.getStats();
-    console.log('stats', stats);
+    for (const report of stats.values()) {
+      if (report.type === "candidate-pair" && report.state === "succeeded") {
+        const local = stats.get(report.localCandidateId);
+        const remote = stats.get(report.remoteCandidateId);
+        if (!local || !remote) continue;
 
-    stats.forEach(report => {
-        if (report.type === "candidate-pair" && report.state === "succeeded") {
-            const local = stats.get(report.localCandidateId);
-            const remote = stats.get(report.remoteCandidateId);
+        const localType = local.candidateType;   // host | srflx | relay
+        const remoteType = remote.candidateType;
 
-            if (!local || !remote) return;
-
-            let type = "P2P";
-
-            if (local.candidateType === "relay" || remote.candidateType === "relay") {
-                type = "TURN (relay)";
-            }
-
-            console.log('type', type);
+        let type;
+        if (localType === "relay" || remoteType === "relay") {
+          type = "TURN (relay)";
+        } else if (localType === "srflx" || remoteType === "srflx") {
+          type = "P2P (srflx)";
+        } else {
+          type = "P2P (host)";
         }
-    });
+        return { type, localType, remoteType };
+      }
+    }
+    return null;
   }
 
   const createPeerConnection = useCallback(
@@ -85,48 +96,55 @@ export function usePeerConnections({ profileRef, sendMessage }) {
       }
 
       const pc = new RTCPeerConnection(rtcConfig);
-      console.log('[log]', pc.connectionState);
       const remoteStream = new MediaStream();
+
+      setPeerStatuses((prev) => ({
+        ...prev,
+        [peerName]: { connectionState: "new", iceConnectionState: "new", connectionType: null },
+      }));
 
       pc.ontrack = (event) => {
         event.streams[0].getTracks().forEach((track) => remoteStream.addTrack(track));
         setRemoteStreams((prev) => ({ ...prev, [peerName]: remoteStream }));
-        setPeerStatuses((prev) => {
-          if (!prev[peerName]) return prev;
-          const next = { ...prev };
-          delete next[peerName];
-          return next;
-        });
       };
 
       pc.onicecandidate = (event) => {
         if (!event.candidate) return;
         const { roomId, username } = profileRef.current;
-        sendMessage({
-          type: "candidate",
-          roomId,
-          sender: username,
-          target: peerName,
-          candidate: event.candidate,
-        });
+        sendMessage({ type: "candidate", roomId, sender: username, target: peerName, candidate: event.candidate });
       };
 
-      pc.onconnectionstatechange = async () => {   
-        console.log('[log]', pc.connectionState);
-        if (pc.connectionState === "connected") {
-          detectConnectionType(pc);
-          setPeerStatuses((prev) => {
-            if (!prev[peerName]) return prev;
-            const next = { ...prev };
-            delete next[peerName];
-            return next;
-          });
-        } else if (["failed", "disconnected"].includes(pc.connectionState)) {
-          setPeerStatuses((prev) => ({ ...prev, [peerName]: pc.connectionState }));
-          const { roomId } = profileRef.current;
-          sendMessage({ type: "checkPeer", roomId, peerName });
-        } else if (pc.connectionState === "closed") {
-          setPeerStatuses((prev) => ({ ...prev, [peerName]: "closed" }));
+      pc.oniceconnectionstatechange = () => {
+        const iceState = pc.iceConnectionState;
+        console.log(`[ICE ] ${peerName} | ${iceState}`);
+        setPeerStatuses((prev) => ({
+          ...prev,
+          [peerName]: { ...(prev[peerName] || {}), iceConnectionState: iceState },
+        }));
+      };
+
+      pc.onconnectionstatechange = async () => {
+        const state = pc.connectionState;
+        const ts = new Date().toLocaleTimeString();
+
+        if (state === "connected") {
+          const info = await detectConnectionType(pc);
+          callStartTimesRef.current[peerName] = Date.now();
+          console.log(`[Call ▶] ${peerName} | connected @ ${ts} | ${info?.type ?? "unknown"} | local: ${info?.localType} remote: ${info?.remoteType}`);
+          setPeerStatuses((prev) => ({
+            ...prev,
+            [peerName]: { ...(prev[peerName] || {}), connectionState: state, connectionType: info?.type ?? null },
+          }));
+        } else {
+          console.log(`[Conn ] ${peerName} | ${state} @ ${ts}`);
+          setPeerStatuses((prev) => ({
+            ...prev,
+            [peerName]: { ...(prev[peerName] || {}), connectionState: state },
+          }));
+          if (["disconnected", "failed"].includes(state)) {
+            const { roomId } = profileRef.current;
+            sendMessage({ type: "checkPeer", roomId, peerName });
+          }
         }
       };
 

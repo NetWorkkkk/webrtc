@@ -123,6 +123,16 @@ input {
   margin-bottom: 4px;
 }
 
+.auth-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.auth-actions button {
+  flex: 1;
+}
+
 .room-card {
   width: 100%;
   max-width: 980px;
@@ -260,11 +270,39 @@ input {
   overflow: hidden;
 }
 
-.video-tile header {
+.video-tile-header {
   padding: 8px 10px;
   border-bottom: 1px solid rgba(148, 163, 184, 0.3);
   color: #cbd5e1;
   font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.conn-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 99px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.conn-badge--new,
+.conn-badge--connecting    { background: #334155; color: #94a3b8; }
+.conn-badge--connected     { background: #14532d; color: #86efac; }
+.conn-badge--disconnected  { background: #78350f; color: #fcd34d; }
+.conn-badge--failed,
+.conn-badge--closed        { background: #7f1d1d; color: #fca5a5; }
+
+.ice-state {
+  height: 18px;
+  padding: 0 10px;
+  font-size: 0.7rem;
+  line-height: 18px;
+  color: #64748b;
 }
 
 .video-tile-body {
