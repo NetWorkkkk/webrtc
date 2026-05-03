@@ -69,17 +69,21 @@ export function usePeerConnections({ profileRef, sendMessage }) {
   }, []);
 
   async function detectConnectionType(pc) {
+    // Brief delay so the browser's stats snapshot includes the nominated pair.
+    await new Promise((r) => setTimeout(r, 200));
     const stats = await pc.getStats();
     for (const report of stats.values()) {
-      if (report.type === "candidate-pair" && report.state === "succeeded") {
+      // Only inspect the nominated pair — that is the one actually in use.
+      if (report.type === "candidate-pair" && report.nominated && report.state === "succeeded") {
         const local = stats.get(report.localCandidateId);
         const remote = stats.get(report.remoteCandidateId);
         if (!local || !remote) continue;
 
         const localType = local.candidateType;   // host | srflx | relay
-        console.log('localType', localType);
         const remoteType = remote.candidateType;
+        console.log('localType', localType);
         console.log('remoteType', remoteType);
+      
 
         let type;
         if (localType === "relay" || remoteType === "relay") {
