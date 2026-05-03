@@ -68,34 +68,42 @@ export function usePeerConnections({ profileRef, sendMessage }) {
     return stream;
   }, []);
 
+  function classifyConnection(localType, remoteType) {
+    if (localType === "relay" || remoteType === "relay") return "TURN (relay)";
+    if (localType === "srflx" || remoteType === "srflx") return "P2P (srflx)";
+    return "P2P (host)";
+  }
+
   async function detectConnectionType(pc) {
-    // Brief delay so the browser's stats snapshot includes the nominated pair.
+    // Brief delay so selected pair appears in stats on all browsers.
     await new Promise((r) => setTimeout(r, 200));
     const stats = await pc.getStats();
+
+    // 1) Preferred path: selected candidate-pair via transport.selectedCandidatePairId
     for (const report of stats.values()) {
-      // Only inspect the nominated pair — that is the one actually in use.
-      if (report.type === "candidate-pair" && report.nominated && report.state === "succeeded") {
-        const local = stats.get(report.localCandidateId);
-        const remote = stats.get(report.remoteCandidateId);
-        if (!local || !remote) continue;
-
-        const localType = local.candidateType;   // host | srflx | relay
-        const remoteType = remote.candidateType;
-        console.log('localType', localType);
-        console.log('remoteType', remoteType);
-      
-
-        let type;
-        if (localType === "relay" || remoteType === "relay") {
-          type = "TURN (relay)";
-        } else if (localType === "srflx" || remoteType === "srflx") {
-          type = "P2P (srflx)";
-        } else {
-          type = "P2P (host)";
-        }
-        return { type, localType, remoteType };
-      }
+      if (report.type !== "transport" || !report.selectedCandidatePairId) continue;
+      const pair = stats.get(report.selectedCandidatePairId);
+      if (!pair) continue;
+      const local = stats.get(pair.localCandidateId);
+      const remote = stats.get(pair.remoteCandidateId);
+      if (!local || !remote) continue;
+      const localType = local.candidateType;   // host | srflx | relay
+      const remoteType = remote.candidateType;
+      return { type: classifyConnection(localType, remoteType), localType, remoteType };
     }
+
+    // 2) Fallback path: nominated+succeeded pair (older browser stats behavior)
+    for (const report of stats.values()) {
+      if (report.type !== "candidate-pair") continue;
+      if (!report.nominated || report.state !== "succeeded") continue;
+      const local = stats.get(report.localCandidateId);
+      const remote = stats.get(report.remoteCandidateId);
+      if (!local || !remote) continue;
+      const localType = local.candidateType;
+      const remoteType = remote.candidateType;
+      return { type: classifyConnection(localType, remoteType), localType, remoteType };
+    }
+
     return null;
   }
 
