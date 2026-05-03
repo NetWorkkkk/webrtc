@@ -77,7 +77,9 @@ export function usePeerConnections({ profileRef, sendMessage }) {
         if (!local || !remote) continue;
 
         const localType = local.candidateType;   // host | srflx | relay
+        console.log('localType', localType);
         const remoteType = remote.candidateType;
+        console.log('remoteType', remoteType);
 
         let type;
         if (localType === "relay" || remoteType === "relay") {
