@@ -13,6 +13,7 @@ export function AppProvider({ children }) {
 
   const [wsState, setWsState] = useState("connecting");
   const [notice, setNotice] = useState(null);
+  const [callNotification, setCallNotification] = useState(null); // { callerName }
   const [profile, setProfile] = useState({ username: "", roomId: "", joined: false });
   const [roomMembers, setRoomMembers] = useState([]);
   const [callMembers, setCallMembers] = useState([]);
@@ -84,11 +85,10 @@ export function AppProvider({ children }) {
     stopLocalMedia();
   }, [closeAllPeers, stopLocalMedia]);
 
+  const dismissCallNotification = useCallback(() => setCallNotification(null), []);
+
   const ringIncomingCallNotification = useCallback((callerName) => {
-    setNotice({
-      type: "success",
-      text: `${callerName} started a call. Join when you're ready.`,
-    });
+    setCallNotification({ callerName });
 
     const now = Date.now();
     if (now - lastRingAtRef.current < 5000) return;
@@ -331,6 +331,7 @@ export function AppProvider({ children }) {
     () => ({
       wsState,
       notice,
+      callNotification,
       profile,
       roomMembers,
       callMembers,
@@ -346,10 +347,12 @@ export function AppProvider({ children }) {
       leaveCall,
       leaveRoom,
       clearNotice,
+      dismissCallNotification,
     }),
     [
       wsState,
       notice,
+      callNotification,
       profile,
       roomMembers,
       callMembers,
@@ -365,6 +368,7 @@ export function AppProvider({ children }) {
       leaveCall,
       leaveRoom,
       clearNotice,
+      dismissCallNotification,
     ]
   );
 

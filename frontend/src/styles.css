@@ -35,6 +35,101 @@ button.danger {
   background: var(--danger);
 }
 
+/* ── Incoming call notification popup ─────────────────────────────────── */
+
+.call-notif-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 32px;
+  pointer-events: none;
+}
+
+.call-notif {
+  pointer-events: all;
+  background: #1e293b;
+  color: #f1f5f9;
+  border-radius: 16px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.45);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  padding: 20px 22px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 320px;
+  max-width: 420px;
+  animation: call-notif-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes call-notif-in {
+  from { opacity: 0; transform: translateY(-20px) scale(0.95); }
+  to   { opacity: 1; transform: translateY(0)   scale(1); }
+}
+
+.call-notif-icon {
+  font-size: 2rem;
+  animation: ring 0.6s ease-in-out infinite alternate;
+  flex-shrink: 0;
+}
+
+@keyframes ring {
+  from { transform: rotate(-15deg); }
+  to   { transform: rotate(15deg); }
+}
+
+.call-notif-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.call-notif-title {
+  margin: 0 0 3px;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.call-notif-sub {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.call-notif-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  flex-shrink: 0;
+}
+
+.call-notif-btn {
+  padding: 7px 18px;
+  border-radius: 8px;
+  border: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.15s;
+}
+
+.call-notif-btn:hover {
+  filter: brightness(1.1);
+}
+
+.call-notif-btn--join {
+  background: #16a34a;
+  color: #fff;
+}
+
+.call-notif-btn--dismiss {
+  background: #dc2626;
+  color: #fff;
+}
+
+/* ── Notice ─────────────────────────────────────────────────────────────── */
+
 .notice {
   padding: 10px 12px;
   border-radius: 10px;
