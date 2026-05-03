@@ -1,64 +1,90 @@
-import { useEffect, useRef } from "react";
+import { useCallback } from "react";
+import {
+  buildAutoParticipants,
+  buildSidebarParticipants,
+  autoGridDims,
+} from "../hooks/useVideoLayout";
+import { VideoTile } from "./VideoTile";
 
-const OVERLAY_LABEL = {
-  new: "Waiting...",
-  connecting: "Connecting...",
-  disconnected: "Reconnecting...",
-  failed: "Connection lost",
-  closed: "Connection closed",
-};
+export function VideoGrid({
+  myName,
+  localStream,
+  callMembers = [],
+  remoteStreams = {},
+  peerStatuses = {},
+  layout,
+  maxTiles,
+  pinnedPeers,
+  togglePin,
+  canPin,
+}) {
+  const handlePin = useCallback((name) => togglePin(name), [togglePin]);
 
-const BADGE_SPINNER_STATES = new Set(["new", "connecting", "disconnected"]);
+  const tileProps = (p) => ({
+    participant: p,
+    muted: p.isLocal,
+    onPin: handlePin,
+    isPinned: pinnedPeers.includes(p.name),
+    pinDisabled: !canPin(p.name),
+  });
 
-function VideoTile({ label, stream, muted, peerStatus }) {
-  const videoRef = useRef(null);
+  // ── Sidebar ───────────────────────────────────────────────────────────────
+  if (layout === "sidebar") {
+    const { mainParticipants, strip } = buildSidebarParticipants({
+      myName, localStream, callMembers, remoteStreams, peerStatuses, pinnedPeers,
+    });
+    const [mainCols, mainRows] = autoGridDims(mainParticipants.length);
 
-  useEffect(() => {
-    if (!videoRef.current) return;
-    videoRef.current.srcObject = stream || null;
-  }, [stream]);
-
-  const { connectionState, iceConnectionState, connectionType } = peerStatus || {};
-  const showOverlay = connectionState && connectionState !== "connected";
-
-  return (
-    <article className="video-tile">
-      <header className="video-tile-header">
-        <span>{label}</span>
-        {connectionState && (
-          <span className={`conn-badge conn-badge--${connectionState}`}>
-            {connectionState === "connected" && connectionType ? connectionType : connectionState}
-          </span>
-        )}
-      </header>
-      <div className="ice-state">
-        {iceConnectionState && connectionState !== "connected" ? `ICE: ${iceConnectionState}` : ""}
-      </div>
-      <div className="video-tile-body">
-        <video ref={videoRef} autoPlay playsInline muted={muted} />
-        {showOverlay && (
-          <div className={`video-tile-overlay ${connectionState}`}>
-            {BADGE_SPINNER_STATES.has(connectionState) && <span className="overlay-spinner" />}
-            <span>{OVERLAY_LABEL[connectionState] ?? connectionState}</span>
+    return (
+      <div className="video-grid-wrapper">
+        <div className="video-grid video-grid--sidebar">
+          <div className="sidebar-main">
+            <div
+              className="sidebar-main-grid"
+              style={{
+                gridTemplateColumns: `repeat(${mainCols}, 1fr)`,
+                gridTemplateRows:    `repeat(${mainRows}, 1fr)`,
+              }}
+            >
+              {mainParticipants.map((p) => (
+                <VideoTile key={p.name} {...tileProps(p)} size="large" />
+              ))}
+            </div>
           </div>
-        )}
+          <div className="sidebar-strip">
+            {strip.map((p) => (
+              <VideoTile key={p.name} {...tileProps(p)} size="small" />
+            ))}
+          </div>
+        </div>
       </div>
-    </article>
-  );
-}
+    );
+  }
 
-export function VideoGrid({ localStream, remoteStreams, peerStatuses = {}, myName }) {
-  const remoteEntries = Object.entries(remoteStreams);
+  // ── Auto (default) ────────────────────────────────────────────────────────
+  const { visible, hidden } = buildAutoParticipants({
+    myName, localStream, callMembers, remoteStreams, peerStatuses, maxTiles, pinnedPeers,
+  });
+  const [cols, rows] = autoGridDims(visible.length);
 
   return (
-    <section className="video-grid">
-      <VideoTile label={`${myName || "You"} (local)`} stream={localStream} muted />
-      {remoteEntries.map(([name, stream]) => (
-        <VideoTile key={name} label={name} stream={stream} muted={false} peerStatus={peerStatuses[name]} />
-      ))}
-      {remoteEntries.length === 0 && (
-        <div className="empty-video">No remote stream yet. Ask another member to join the call.</div>
+    <div className="video-grid-wrapper">
+      <div
+        className="video-grid video-grid--auto"
+        style={{
+          gridTemplateColumns: `repeat(${cols}, 1fr)`,
+          gridTemplateRows:    `repeat(${rows}, 1fr)`,
+        }}
+      >
+        {visible.map((p) => (
+          <VideoTile key={p.name} {...tileProps(p)} size="large" />
+        ))}
+      </div>
+      {hidden.length > 0 && (
+        <div className="hidden-count">
+          +{hidden.length} more participant{hidden.length > 1 ? "s" : ""} not shown
+        </div>
       )}
-    </section>
+    </div>
   );
 }
