@@ -110,15 +110,61 @@ export function buildSidebarParticipants({ myName, localStream, callMembers, rem
   return { mainParticipants, strip };
 }
 
-/** Returns [cols, rows] for the auto grid given n participants. */
-export function autoGridDims(n) {
-  if (n <= 1) return [1, 1];
-  if (n <= 2) return [2, 1];
-  if (n <= 4) return [2, 2];
-  if (n <= 6) return [3, 2];
-  if (n <= 9) return [3, 3];
-  if (n <= 12) return [4, 3];
-  if (n <= 16) return [4, 4];
-  const cols = Math.ceil(Math.sqrt(n));
-  return [cols, Math.ceil(n / cols)];
+/**
+ * Acceptable display aspect-ratio range for a tile.
+ * Tiles whose cell falls outside this range show slight black bars instead of extreme cropping.
+ *   MIN_TILE_RATIO = 4:3  (most portrait allowed)
+ *   MAX_TILE_RATIO = 16:9 (most landscape allowed)
+ */
+export const MIN_TILE_RATIO = 4 / 3;
+export const MAX_TILE_RATIO = 16 / 9;
+
+/**
+ * Clamp a cell's raw aspect ratio to the acceptable display range.
+ * Used only for CSS rendering — not for grid-selection scoring.
+ */
+export function clampTileRatio(cellRatio) {
+  return Math.min(MAX_TILE_RATIO, Math.max(MIN_TILE_RATIO, cellRatio));
+}
+
+/**
+ * Returns [cols, rows] that maximises tile area for n participants
+ * inside a container with the given aspect ratio (width / height).
+ *
+ * Grid selection uses the native TILE_RATIO so that the algorithm always
+ * picks the layout that fills the container best (e.g. 2 side-by-side on a
+ * wide screen), independent of the display clamping applied later in CSS.
+ */
+const TILE_RATIO = 16 / 10; // native camera/video aspect ratio used for scoring
+
+export function autoGridDims(n, containerRatio = 16 / 9) {
+  if (n <= 0) return [1, 1];
+
+  let bestCols = 1;
+  let bestArea = 0;
+
+  for (let cols = 1; cols <= n; cols++) {
+    const rows = Math.ceil(n / cols);
+
+    const cellW = 1 / cols;
+    const cellH = 1 / containerRatio / rows;
+
+    // Fit a TILE_RATIO tile into the cell (unclamped, for scoring only)
+    let tileW, tileH;
+    if (cellW / cellH > TILE_RATIO) {
+      tileH = cellH;
+      tileW = cellH * TILE_RATIO;
+    } else {
+      tileW = cellW;
+      tileH = cellW / TILE_RATIO;
+    }
+
+    const area = tileW * tileH;
+    if (area > bestArea) {
+      bestArea = area;
+      bestCols = cols;
+    }
+  }
+
+  return [bestCols, Math.ceil(n / bestCols)];
 }

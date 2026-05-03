@@ -25,9 +25,14 @@ function nameToColor(name) {
  * @param {boolean} isPinned
  * @param {"normal"|"large"|"small"} size
  */
-export function VideoTile({ participant, muted = false, onPin, isPinned = false, pinDisabled = false, size = "normal" }) {
+export function VideoTile({ participant, muted = false, onPin, isPinned = false, pinDisabled = false, size = "normal", clampedRatio }) {
   const { name, stream, isLocal, peerStatus } = participant;
   const videoRef = useRef(null);
+  // Large tiles: fill the cell by height; width is determined by clamped aspect ratio.
+  // The tile body uses overflow:hidden to clip any excess width.
+  const mediaStyle = size === "large" && clampedRatio
+    ? { height: "100%", width: "auto", aspectRatio: clampedRatio }
+    : {};
 
   const { connectionState, iceConnectionState, connectionType } = peerStatus || {};
   const showOverlay = connectionState && connectionState !== "connected";
@@ -65,9 +70,9 @@ export function VideoTile({ participant, muted = false, onPin, isPinned = false,
 
       <div className="video-tile-body">
         {stream ? (
-          <video ref={videoRef} autoPlay playsInline muted={muted} />
+          <video ref={videoRef} autoPlay playsInline muted={muted} style={mediaStyle} />
         ) : (
-          <div className="tile-avatar" style={{ background: nameToColor(name) }}>
+          <div className="tile-avatar" style={{ ...mediaStyle, background: nameToColor(name) }}>
             <span>{name.charAt(0).toUpperCase()}</span>
           </div>
         )}

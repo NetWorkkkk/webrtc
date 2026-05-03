@@ -1,8 +1,9 @@
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   buildAutoParticipants,
   buildSidebarParticipants,
   autoGridDims,
+  clampTileRatio,
 } from "../hooks/useVideoLayout";
 import { VideoTile } from "./VideoTile";
 
@@ -18,6 +19,20 @@ export function VideoGrid({
   togglePin,
   canPin,
 }) {
+  const wrapperRef = useRef(null);
+  const [containerRatio, setContainerRatio] = useState(16 / 9);
+
+  useEffect(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
+    const obs = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      if (height > 0) setContainerRatio(width / height);
+    });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
   const handlePin = useCallback((name) => togglePin(name), [togglePin]);
 
   const tileProps = (p) => ({
@@ -33,10 +48,14 @@ export function VideoGrid({
     const { mainParticipants, strip } = buildSidebarParticipants({
       myName, localStream, callMembers, remoteStreams, peerStatuses, pinnedPeers,
     });
-    const [mainCols, mainRows] = autoGridDims(mainParticipants.length);
+    // Sidebar main area: measure via containerRatio, but main area is roughly
+    // (containerRatio * sidebarFraction) wide — use containerRatio as approximation.
+    const [mainCols, mainRows] = autoGridDims(mainParticipants.length, containerRatio);
+    const mainCellRatio = containerRatio * mainRows / mainCols;
+    const mainTileRatio = clampTileRatio(mainCellRatio);
 
     return (
-      <div className="video-grid-wrapper">
+      <div className="video-grid-wrapper" ref={wrapperRef}>
         <div className="video-grid video-grid--sidebar">
           <div className="sidebar-main">
             <div
@@ -47,7 +66,7 @@ export function VideoGrid({
               }}
             >
               {mainParticipants.map((p) => (
-                <VideoTile key={p.name} {...tileProps(p)} size="large" />
+                <VideoTile key={p.name} {...tileProps(p)} size="large" clampedRatio={mainTileRatio} />
               ))}
             </div>
           </div>
@@ -65,10 +84,12 @@ export function VideoGrid({
   const { visible, hidden } = buildAutoParticipants({
     myName, localStream, callMembers, remoteStreams, peerStatuses, maxTiles, pinnedPeers,
   });
-  const [cols, rows] = autoGridDims(visible.length);
+  const [cols, rows] = autoGridDims(visible.length, containerRatio);
+  const cellRatio = containerRatio * rows / cols;
+  const clampedRatio = clampTileRatio(cellRatio);
 
   return (
-    <div className="video-grid-wrapper">
+    <div className="video-grid-wrapper" ref={wrapperRef}>
       <div
         className="video-grid video-grid--auto"
         style={{
@@ -77,7 +98,7 @@ export function VideoGrid({
         }}
       >
         {visible.map((p) => (
-          <VideoTile key={p.name} {...tileProps(p)} size="large" />
+          <VideoTile key={p.name} {...tileProps(p)} size="large" clampedRatio={clampedRatio} />
         ))}
       </div>
       {hidden.length > 0 && (
