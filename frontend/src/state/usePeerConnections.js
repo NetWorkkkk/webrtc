@@ -74,6 +74,14 @@ export function usePeerConnections({ profileRef, sendMessage }) {
     return "P2P (host)";
   }
 
+  function candidateEndpoint(candidate) {
+    if (!candidate) return "unknown";
+    const address = candidate.address || candidate.ip || "unknown";
+    const port = candidate.port != null ? `:${candidate.port}` : "";
+    const protocol = candidate.protocol || "unknown";
+    return `${address}${port} (${protocol})`;
+  }
+
   async function detectConnectionType(pc) {
     // Brief delay so selected pair appears in stats on all browsers.
     await new Promise((r) => setTimeout(r, 200));
@@ -89,7 +97,13 @@ export function usePeerConnections({ profileRef, sendMessage }) {
       if (!local || !remote) continue;
       const localType = local.candidateType;   // host | srflx | relay
       const remoteType = remote.candidateType;
-      return { type: classifyConnection(localType, remoteType), localType, remoteType };
+      return {
+        type: classifyConnection(localType, remoteType),
+        localType,
+        remoteType,
+        localEndpoint: candidateEndpoint(local),
+        remoteEndpoint: candidateEndpoint(remote),
+      };
     }
 
     // 2) Fallback path: nominated+succeeded pair (older browser stats behavior)
@@ -101,7 +115,13 @@ export function usePeerConnections({ profileRef, sendMessage }) {
       if (!local || !remote) continue;
       const localType = local.candidateType;
       const remoteType = remote.candidateType;
-      return { type: classifyConnection(localType, remoteType), localType, remoteType };
+      return {
+        type: classifyConnection(localType, remoteType),
+        localType,
+        remoteType,
+        localEndpoint: candidateEndpoint(local),
+        remoteEndpoint: candidateEndpoint(remote),
+      };
     }
 
     return null;
@@ -148,7 +168,9 @@ export function usePeerConnections({ profileRef, sendMessage }) {
         if (state === "connected") {
           const info = await detectConnectionType(pc);
           callStartTimesRef.current[peerName] = Date.now();
-          console.log(`[Call ▶] ${peerName} | connected @ ${ts} | ${info?.type ?? "unknown"} | local: ${info?.localType} remote: ${info?.remoteType}`);
+          console.log(
+            `[Call ▶] ${peerName} | connected @ ${ts} | ${info?.type ?? "unknown"} | local: ${info?.localType} ${info?.localEndpoint ?? ""} | remote: ${info?.remoteType} ${info?.remoteEndpoint ?? ""}`
+          );
           setPeerStatuses((prev) => ({
             ...prev,
             [peerName]: { ...(prev[peerName] || {}), connectionState: state, connectionType: info?.type ?? null },
