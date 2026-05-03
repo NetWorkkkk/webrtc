@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useAppState } from "../state/appContext";
 import { VideoGrid } from "../components/VideoGrid";
@@ -13,7 +13,11 @@ export function CallPage() {
     localStream, remoteStreams, peerStatuses,
   } = useAppState();
 
-  const { layout, setLayout, maxTiles, setMaxTiles, pinnedPeers, togglePin, canPin } = useVideoLayout();
+  const { layout, setLayout, maxTiles, setMaxTiles, pinnedPeers, togglePin, cleanupPins, canPin } = useVideoLayout();
+
+  useEffect(() => {
+    cleanupPins(callMembers);
+  }, [callMembers, cleanupPins]);
   const [panelOpen, setPanelOpen] = useState(false);
 
   if (!profile.joined) return <Navigate to="/" replace />;

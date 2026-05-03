@@ -44,12 +44,18 @@ export function useVideoLayout() {
     });
   }, []);
 
+  // Remove any pins for names no longer in the provided list
+  const cleanupPins = useCallback((activeNames) => {
+    const activeSet = new Set(activeNames);
+    setPinnedPeers((prev) => prev.filter((n) => activeSet.has(n)));
+  }, []);
+
   // true if this peer can be (un)pinned: either already pinned, or under limit
   const canPin = useCallback((name) => (
     pinnedPeers.includes(name) || pinnedPeers.length < MAX_PINS
   ), [pinnedPeers]);
 
-  return { layout, setLayout, maxTiles, setMaxTiles, pinnedPeers, togglePin, canPin };
+  return { layout, setLayout, maxTiles, setMaxTiles, pinnedPeers, togglePin, cleanupPins, canPin };
 }
 
 /**
