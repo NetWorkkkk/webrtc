@@ -45,6 +45,14 @@ export function AppProvider({ children }) {
 
   const clearNotice = useCallback(() => setNotice(null), []);
 
+  // Auto-dismiss notices after 4 s (errors linger a bit longer at 6 s)
+  useEffect(() => {
+    if (!notice) return;
+    const delay = notice.type === "error" ? 6000 : 4000;
+    const id = setTimeout(() => setNotice(null), delay);
+    return () => clearTimeout(id);
+  }, [notice]);
+
   const sendMessage = useCallback((payload) => {
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
       setNotice({ type: "error", text: "WebSocket is not ready yet." });
