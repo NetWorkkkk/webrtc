@@ -60,6 +60,10 @@ export function usePeerConnections({ profileRef, sendMessage }) {
   const ensureLocalMedia = useCallback(async () => {
     if (localStreamRef.current) return localStreamRef.current;
     const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    // Update the ref immediately so callers that run in the same async turn
+    // (e.g. initiateOfferToPeer right after joinCall) see the stream before
+    // the useEffect syncing localStream state has had a chance to run.
+    localStreamRef.current = stream;
     setLocalStream(stream);
     return stream;
   }, []);
