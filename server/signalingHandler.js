@@ -281,13 +281,6 @@ class SignalingHandler {
             return;
         }
 
-        const members = this.roomManager.getCallMembers(roomId);
-        ws.send(JSON.stringify({
-            type: 'callMembers',
-            roomId,
-            members
-        }));
-
         this.broadcastToRoom(roomId, {
             type: 'memberJoinCall',
             roomId,

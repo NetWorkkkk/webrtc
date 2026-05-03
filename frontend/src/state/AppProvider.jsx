@@ -18,13 +18,11 @@ export function AppProvider({ children }) {
   const [roomMembers, setRoomMembers] = useState([]);
   const [callMembers, setCallMembers] = useState([]);
   const [inCall, setInCall] = useState(false);
-  const [pendingCallJoin, setPendingCallJoin] = useState(false);
 
   const wsRef = useRef(null);
   const profileRef = useRef(profile);
   const inCallRef = useRef(inCall);
   const callMembersRef = useRef(callMembers);
-  const pendingCallJoinRef = useRef(pendingCallJoin);
   const lastRingAtRef = useRef(0);
   const runtimeRef = useRef(null);
 
@@ -39,10 +37,6 @@ export function AppProvider({ children }) {
   useEffect(() => {
     callMembersRef.current = callMembers;
   }, [callMembers]);
-
-  useEffect(() => {
-    pendingCallJoinRef.current = pendingCallJoin;
-  }, [pendingCallJoin]);
 
   const clearNotice = useCallback(() => setNotice(null), []);
 
@@ -79,7 +73,6 @@ export function AppProvider({ children }) {
 
   const leaveCallLocal = useCallback(() => {
     setInCall(false);
-    setPendingCallJoin(false);
     setCallMembers((prev) => prev.filter((name) => name !== profileRef.current.username));
     closeAllPeers();
     stopLocalMedia();
@@ -204,13 +197,6 @@ export function AppProvider({ children }) {
 
         case "callMembers":
           setCallMembers(data.members);
-          if (pendingCallJoinRef.current) {
-            const peers = data.members.filter((name) => name !== profileRef.current.username);
-            for (const peerName of peers) {
-              await runtimeRef.current?.initiateOfferToPeer(peerName); // offer to each peer
-            }
-            setPendingCallJoin(false);
-          }
           break;
         case "memberJoinCall":
           const firstCallMember = callMembersRef.current.length === 0;
@@ -284,7 +270,6 @@ export function AppProvider({ children }) {
     try {
       await ensureLocalMedia();
       setInCall(true);
-      setPendingCallJoin(false);
       setCallMembers((prev) => (prev.includes(username) ? prev : [...prev, username]));
 
       sendMessage({ type: "startCall", roomId, username });
@@ -299,9 +284,12 @@ export function AppProvider({ children }) {
     try {
       await ensureLocalMedia();
       setInCall(true);
-      setPendingCallJoin(true);
       setCallMembers((prev) => (prev.includes(username) ? prev : [...prev, username]));
       sendMessage({ type: "joinCall", roomId, username });
+      const peers = callMembersRef.current.filter((name) => name !== username);
+      for (const peerName of peers) {
+        await runtimeRef.current?.initiateOfferToPeer(peerName); // offer to each peer
+      }
       navigate("/call");
     } catch {
       setNotice({ type: "error", text: "Please allow access to camera/microphone." });
