@@ -20,15 +20,13 @@ export function MembersPanel({ myName, callMembers, roomMembers, pinnedPeers, to
               <span className="panel-member-name">
                 {isMe ? `${name} (you)` : name}
               </span>
-              {!isMe && (
-                <button
-                  className={`panel-pin-btn${isPinned ? " panel-pin-btn--active" : ""}${disabled ? " panel-pin-btn--disabled" : ""}`}
-                  onClick={() => !disabled && togglePin(name)}
-                  title={isPinned ? "Unpin" : disabled ? `Max ${MAX_PINS} pins reached` : "Pin to main view"}
-                >
-                  {isPinned ? "Unpin" : "Pin"}
-                </button>
-              )}
+              <button
+                className={`panel-pin-btn${isPinned ? " panel-pin-btn--active" : ""}${disabled ? " panel-pin-btn--disabled" : ""}`}
+                onClick={() => !disabled && togglePin(name)}
+                title={isPinned ? "Unpin" : disabled ? `Max ${MAX_PINS} pins reached` : "Pin to main view"}
+              >
+                {isPinned ? "Unpin" : "Pin"}
+              </button>
             </div>
           );
         })}

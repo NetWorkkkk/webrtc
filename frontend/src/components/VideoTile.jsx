@@ -52,7 +52,7 @@ export function VideoTile({ participant, muted = false, onPin, isPinned = false,
               {connectionState === "connected" && connectionType ? connectionType : connectionState}
             </span>
           )}
-          {onPin && !isLocal && (
+          {onPin && (
             <button
               className={`pin-btn${isPinned ? " pin-btn--active" : ""}${pinDisabled ? " pin-btn--disabled" : ""}`}
               onClick={() => !pinDisabled && onPin(name)}

@@ -68,14 +68,14 @@ export function buildAutoParticipants({ myName, localStream, callMembers, remote
       peerStatus: peerStatuses[name] ?? null,
     }));
 
+  const all = [local, ...remotes];
   const pinnedSet = new Set(pinnedPeers);
   const sorted = [
-    ...remotes.filter((p) => pinnedSet.has(p.name)).sort((a, b) => pinnedPeers.indexOf(a.name) - pinnedPeers.indexOf(b.name)),
-    ...remotes.filter((p) => !pinnedSet.has(p.name)),
+    ...all.filter((p) => pinnedSet.has(p.name)).sort((a, b) => pinnedPeers.indexOf(a.name) - pinnedPeers.indexOf(b.name)),
+    ...all.filter((p) => !pinnedSet.has(p.name)),
   ];
 
-  const all = [local, ...sorted];
-  return { visible: all.slice(0, maxTiles), hidden: all.slice(maxTiles) };
+  return { visible: sorted.slice(0, maxTiles), hidden: sorted.slice(maxTiles) };
 }
 
 /**
@@ -95,8 +95,9 @@ export function buildSidebarParticipants({ myName, localStream, callMembers, rem
       peerStatus: peerStatuses[name] ?? null,
     }));
 
+  const all = [local, ...remotes];
   const pinnedSet = new Set(pinnedPeers);
-  const pinned = remotes
+  const pinned = all
     .filter((p) => pinnedSet.has(p.name))
     .sort((a, b) => pinnedPeers.indexOf(a.name) - pinnedPeers.indexOf(b.name));
 
@@ -105,7 +106,7 @@ export function buildSidebarParticipants({ myName, localStream, callMembers, rem
     : (remotes.length > 0 ? [remotes[0]] : [local]);
 
   const mainNames = new Set(mainParticipants.map((p) => p.name));
-  const strip = [local, ...remotes].filter((p) => !mainNames.has(p.name));
+  const strip = all.filter((p) => !mainNames.has(p.name));
 
   return { mainParticipants, strip };
 }
