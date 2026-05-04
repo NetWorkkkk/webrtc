@@ -1,8 +1,5 @@
-// export function getWsUrl() {
-//   const wsProtocol = window.location.protocol === "https:" ? "wss" : "ws";
-//   return `${wsProtocol}://${window.location.host}/ws`;
-// }
+const DEFAULT_WS_URL = "wss://rtc.ktranowl.id.vn/ws";
 
 export function getWsUrl() {
-  return 'wss://rtc.ktranowl.id.vn/ws';
+  return import.meta.env.VITE_WS_URL || DEFAULT_WS_URL;
 }
