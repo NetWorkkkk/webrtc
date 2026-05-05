@@ -1,0 +1,13 @@
+services:
+  coturn:
+    image: coturn/coturn:alpine
+    container_name: coturn
+    network_mode: "host"
+    user: root
+    restart: unless-stopped
+
+    command: ["-c", "/etc/coturn/turnserver.conf"]
+
+    volumes:
+      - ./turnserver.conf:/etc/coturn/turnserver.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
