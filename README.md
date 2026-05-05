@@ -4,8 +4,8 @@ A simple multi-user room + group call application using:
 
 - **Frontend**: React + Vite (built into `public/`)
 - **Backend**: Node.js + Express + WebSocket (`ws`)
-- **Media**: WebRTC mesh (peer-to-peer where possible, TURN relay fallback)
-- **TURN/STUN**: coturn
+- **Media**: WebRTC mesh (direct peer-to-peer on LAN, TURN relay fallback for public/NAT cases)
+- **TURN/STUN**: coturn (optional for LAN, recommended for public internet access)
 
 ---
 
@@ -20,21 +20,21 @@ A simple multi-user room + group call application using:
 
 ## 2) Prerequisites
 
-- Linux VPS or LAN machine, with all the below prerequisites
+- Linux VPS or LAN machine
 - Node.js 18+ and npm
 - Nginx
 - PM2 (`npm i -g pm2`)
-- Docker + Docker Compose (for coturn)
+- Docker + Docker Compose (only if running coturn/TURN)
 - Open firewall ports:
   - App/Nginx: `80`, `443`
-  - TURN: `3478` (UDP/TCP), `5349` (TLS TURN)
-  - TURN relay range from your `turnserver.conf` (current sample: `49152-65535`)
+  - TURN only if using coturn: `3478` (UDP/TCP), `5349` (TLS TURN)
+  - TURN relay range only if using coturn, from your `turnserver.conf` (current sample: `49152-65535`)
 
 ---
 
-## 4) Deploy on VPS (Public IP + Domain) - Recommended
+## 3) Deploy on VPS (Public IP + Domain) - Recommended
 
-### 4.1 Install dependencies
+### 3.1 Install dependencies
 
 ```bash
 sudo apt update
@@ -49,7 +49,7 @@ cd webRTC
 npm install
 ```
 
-### 4.2 Issue SSL certificate with Certbot
+### 3.2 Issue SSL certificate with Certbot
 
 Make sure DNS points your domain to VPS public IP.
 
@@ -62,7 +62,7 @@ This will generate certs under:
 - `/etc/letsencrypt/live/rtc.ktranowl.id.vn/fullchain.pem`
 - `/etc/letsencrypt/live/rtc.ktranowl.id.vn/privkey.pem`
 
-### 4.3 Configure and run coturn
+### 3.3 Configure and run coturn
 
 Edit `coturn/turnserver.conf`:
 
@@ -83,7 +83,7 @@ Check log with:
 docker compose logs -f
 ```
 
-### 4.4 Configure frontend env (build-time), build, and publish static files
+### 3.4 Configure frontend env (build-time), build, and publish static files
 
 Frontend reads config at **build time** via Vite env variables:
 
@@ -128,7 +128,7 @@ sudo mkdir -p /var/www/rtc
 sudo cp -r public/* /var/www/rtc/
 ```
 
-### 4.5 Run backend with PM2
+### 3.5 Run backend with PM2
 If we run normal `npm start`, it will stop if our ssh session ends. We need something to run in a background as a service. The selected tool is `pm2`
 
 ```bash
@@ -140,7 +140,7 @@ pm2 startup
 
 Backend listens on `PORT` (default `3000`).
 
-### 4.6 Configure Nginx (serve frontend + proxy WebSocket)
+### 3.6 Configure Nginx (serve frontend + proxy WebSocket)
 
 Use the ready template in this repo (`nginx.conf`).
 Replace our domain `rtc.ktranowl.id.vn` with your domain, and copy it to Nginx:
@@ -159,21 +159,23 @@ sudo systemctl reload nginx
 
 ---
 
-## 5) Run in LAN (Multiple Machines in Same Local Network)
+## 4) Run in LAN (Multiple Machines in Same Local Network)
 
-### 5.1 Server machine
+### 4.1 Server machine
 
 1. Find server LAN IP (example `10.8.0.5`)
 2. In frontend env:
    - `cp frontend/.env.lan.example frontend/.env`
    - replace `10.8.0.5` with your server LAN IP
-3. Build frontend and copy to nginx folder as in section 4 above.
-4. Start backend as in section 4 above.
+   - `frontend/.env.lan.example` uses `VITE_ICE_SERVERS=[]` because coturn/TURN is not required for machines on the same LAN
+3. Build frontend and copy to nginx folder as in section 3.4 above.
+4. Start backend as in section 3.5 above.
 5. Create LAN HTTPS cert using mkcert:
    - install mkcert if needed (`sudo apt install -y mkcert`)
-   - `sudo mkdir -p /etc/nginx/ssl`
    - `mkcert -install`
-   - `sudo mkcert -cert-file /etc/nginx/ssl/lan.crt -key-file /etc/nginx/ssl/lan.key 10.8.0.5`
+   - `mkcert -cert-file lan.crt -key-file lan.key 10.8.0.5`
+   - `sudo mkdir -p /etc/nginx/ssl`
+   - `sudo cp lan.crt lan.key /etc/nginx/ssl/`
 6. Configure Nginx using `nginx.lan.conf`, replace `10.8.0.5` with your LAN IP if needed
    - copy with:
      - `sudo cp nginx.lan.conf /etc/nginx/sites-available/rtc-lan`
@@ -181,24 +183,24 @@ sudo systemctl reload nginx
      - `sudo nginx -t && sudo systemctl reload nginx`
 7. Open firewall on LAN as needed
 
-### 5.2 Access from client machines
+### 4.2 Access from client machines
 
 Open:
 
 - `https://10.8.0.5`
-### 5.3 LAN note
 
-This LAN example uses HTTPS + WSS with mkcert.
-When first opening `https://10.8.0.5`, browser may show an unsafe certificate warning.
+### 4.3 LAN note
 
-Clients have 2 choices:
+This LAN example uses HTTPS + WSS with mkcert and does not need coturn.
+When first opening `https://10.8.0.5`, the browser may show an unsafe certificate warning if the client machine does not trust the mkcert root CA.
 
-1. Quick test only: proceed unsafely and ignore the warning.
-2. Proper setup (recommended): trust the mkcert root CA.
+For quick LAN testing, accept the warning and proceed. For a fully trusted browser lock icon, install the mkcert root CA on each client machine.
+
+If you change the server LAN IP, update `frontend/.env`, `nginx.lan.conf`, and regenerate the mkcert certificate for the new IP.
 
 ---
 
-## 6) How to Use the App
+## 5) How to Use the App
 
 1. Open app in browser
 2. Enter **Your name** and **Room ID**
@@ -214,7 +216,7 @@ Clients have 2 choices:
 
 ---
 
-## 7) Useful Commands
+## 6) Useful Commands
 
 From project root:
 
@@ -235,23 +237,6 @@ npm start
 PM2:
 
 ```bash
-pm2 start npm --name webrtc-server -- start
 pm2 logs webrtc-server
 pm2 restart webrtc-server
 ```
-
----
-
-## 8) Troubleshooting
-
-- **WS not connecting**
-  - Verify `VITE_WS_URL` matches your deployed URL (`ws://` or `wss://`)
-  - Check Nginx `/ws` upgrade headers
-- **No video/audio**
-  - Check browser HTTPS/secure-context requirement
-  - Confirm media permissions granted
-- **P2P fails between networks**
-  - Check TURN credentials and open TURN + relay ports
-  - Confirm `external-ip` in coturn config
-- **Always relay or always host**
-  - Review ICE logs in browser console and verify selected candidate pair
