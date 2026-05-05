@@ -90,13 +90,7 @@ Frontend reads config at **build time** via Vite env variables:
 - `VITE_WS_URL`: WebSocket URL
 - `VITE_ICE_SERVERS`: JSON string array of ICE servers
 
-Template files:
-
-- `frontend/.env.example` (domain + HTTPS/WSS)
-- `frontend/.env.no-domain.example` (public IP, no domain)
-- `frontend/.env.lan.example` (LAN)
-
-For this section (domain + HTTPS), use `frontend/.env.example`.
+For this section (VPS + domain), use `frontend/.env.example`.
 
 Back in project root:
 
@@ -105,7 +99,7 @@ cd /path/to/webRTC
 cp frontend/.env.example frontend/.env
 ```
 
-Then edit `frontend/.env` with your own domain/IP values.
+Then edit `frontend/.env` with your own domain values.
 
 Example:
 
