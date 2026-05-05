@@ -159,78 +159,46 @@ sudo systemctl reload nginx
 
 ---
 
-## 5) Deploy on VPS (Public IP, No Domain)
+## 5) Run in LAN (Multiple Machines in Same Local Network)
 
-This mode is possible for testing, but note:
+### 5.1 Server machine
 
-- Browsers usually require **secure context** for camera/mic.
-- On plain `http://PUBLIC_IP`, `getUserMedia` may be blocked by browser policy.
-
-### 5.1 Quick test flow
-
-1. Set frontend env:
-   - `cp frontend/.env.no-domain.example frontend/.env`
-   - replace `PUBLIC_IP` with your VPS public IP
-2. Build frontend: `npm run build:client`
-3. Copy frontend build to Nginx root:
-   - `sudo mkdir -p /var/www/rtc`
-   - `sudo cp -r public/* /var/www/rtc/`
-4. Run backend with PM2
-5. Configure Nginx to serve `/var/www/rtc` and proxy `/ws` to `127.0.0.1:3000`
-   - use template: `nginx.no-domain.conf`, replace `rtc.ktranowl.id.vn` with your public IP.
-   - copy with:
-     - `sudo cp nginx.no-domain.conf /etc/nginx/sites-available/rtc-ip`
-     - `sudo ln -sf /etc/nginx/sites-available/rtc-ip /etc/nginx/sites-enabled/rtc-ip`
-     - `sudo nginx -t && sudo systemctl reload nginx`
-
-### 5.2 TURN in no-domain mode
-
-For TURN without valid TLS cert, use `turn:` on `3478` (non-TLS) for testing.
-
-In `turnserver.conf`, use IP values for:
-
-- `realm`
-- `server-name`
-- `listening-ip`, `relay-ip`, `external-ip`
-
-### 5.3 Strong recommendation
-
-For real usage, use a domain + HTTPS/WSS.
-
----
-
-## 6) Run in LAN (Multiple Machines in Same Local Network)
-
-### 6.1 Server machine
-
-1. Find server LAN IP (example `192.168.1.10`)
+1. Find server LAN IP (example `10.8.0.5`)
 2. In frontend env:
    - `cp frontend/.env.lan.example frontend/.env`
-   - replace `192.168.1.10` with your server LAN IP/domain
-3. Build frontend: `npm run build:client`
-4. Start backend: `npm start` (or PM2)
-5. Configure Nginx using `nginx.lan.conf`
+   - replace `10.8.0.5` with your server LAN IP
+3. Build frontend and copy to nginx folder as in section 4 above.
+4. Start backend as in section 4 above.
+5. Create LAN HTTPS cert using mkcert:
+   - install mkcert if needed (`sudo apt install -y mkcert`)
+   - `sudo mkdir -p /etc/nginx/ssl`
+   - `mkcert -install`
+   - `sudo mkcert -cert-file /etc/nginx/ssl/lan.crt -key-file /etc/nginx/ssl/lan.key 10.8.0.5`
+6. Configure Nginx using `nginx.lan.conf`, replace `10.8.0.5` with your LAN IP if needed
    - copy with:
      - `sudo cp nginx.lan.conf /etc/nginx/sites-available/rtc-lan`
      - `sudo ln -sf /etc/nginx/sites-available/rtc-lan /etc/nginx/sites-enabled/rtc-lan`
      - `sudo nginx -t && sudo systemctl reload nginx`
-   - replace `rtc.ktranowl.id.vn` in the copied file with your LAN IP/domain
-6. Open firewall on LAN as needed
+7. Open firewall on LAN as needed
 
-### 6.2 Access from client machines
+### 5.2 Access from client machines
 
 Open:
 
-- `http://192.168.1.10` (if serving via Nginx), or
-- direct backend proxy path if configured differently
+- `https://10.8.0.5`
+### 5.3 LAN note
 
-### 6.3 LAN note
+This LAN example uses HTTPS + WSS with mkcert.
+When first opening `https://10.8.0.5`, browser may show an unsafe certificate warning.
 
-This LAN example is HTTP/WS only.
+Clients have 2 choices:
+
+1. Quick test only: proceed unsafely and ignore the warning.
+2. Proper setup (recommended): trust the mkcert root CA.
 
 ---
 
-## 7) How to Use the App
+## 6) How to Use the App
 
 1. Open app in browser
 2. Enter **Your name** and **Room ID**
@@ -246,7 +214,7 @@ This LAN example is HTTP/WS only.
 
 ---
 
-## 8) Useful Commands
+## 7) Useful Commands
 
 From project root:
 
@@ -274,7 +242,7 @@ pm2 restart webrtc-server
 
 ---
 
-## 9) Troubleshooting
+## 8) Troubleshooting
 
 - **WS not connecting**
   - Verify `VITE_WS_URL` matches your deployed URL (`ws://` or `wss://`)
