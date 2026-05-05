@@ -1,8 +1,10 @@
 # WebRTC Room Call
 
+Live website: https://rtc.ktranowl.id.vn/
+
 A simple multi-user room + group call application using:
 
-- **Frontend**: React + Vite (built into `public/`)
+- **Frontend**: React + Vite
 - **Backend**: Node.js + Express + WebSocket (`ws`)
 - **Media**: WebRTC mesh (direct peer-to-peer on LAN, TURN relay fallback for public/NAT cases)
 - **TURN/STUN**: coturn (optional for LAN, recommended for public internet access)
